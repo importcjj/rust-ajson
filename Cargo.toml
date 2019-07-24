@@ -1,0 +1,6 @@
+[package]
+name = "gjson2"
+version = "0.1.0"
+authors = ["importcjj <import@gmail.com>"]
+
+[dependencies]
