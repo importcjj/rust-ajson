@@ -1,140 +1,163 @@
-use std::cell::RefCell;
+extern crate regex;
+
+
+mod parser;
+
+mod path;
+mod read;
+
+mod util;
+mod value;
+use parser::Parser;
+
+use path::Path;
+use read::UTF8Reader;
+
 use std::io;
-use std::str;
+pub use value::Value;
 
-struct Parser<R>
-where
-    R: io::Read,
-{
-    buffer: Vec<u8>,
-    source: R,
-    ch: Option<u8>,
-    length: usize,
-    offset: usize,
+pub fn parse(source: &str) -> Value {
+    let mut reader = Parser::new(source.as_bytes());
+    parse_from_reader(&mut reader)
 }
 
-impl<R> Parser<R>
+pub fn parse_from_reader<R>(reader: &mut Parser<R>) -> Value
 where
     R: io::Read,
 {
-    fn new(r: R) -> Parser<R> {
-        Parser {
-            buffer: vec![],
-            source: r,
-            ch: None,
-            length: 0,
-            offset: 0,
-        }
-    }
-
-    fn next(&mut self) -> Option<u8> {
-        let mut c = [0; 1];
-        let ch = match self.source.read(&mut c) {
-            Ok(1) => {
-                self.buffer.push(c[0]);
-                self.length += 1;
-                if self.ch.is_some() {
-                    self.offset += 1;
-                }
-                Some(c[0])
+    while let Some(b) = reader.peek() {
+        let v = match b {
+            b'{' => {
+                let raw = reader.read_json();
+                Value::Object(raw, None)
             }
-            _ => None,
+            b'[' => {
+                let raw = reader.read_json();
+                Value::Array(raw, None)
+            }
+            b'"' => {
+                let raw = reader.read_string();
+                Value::String(raw)
+            }
+            b'-' | b'0'...b'9' => {
+                let f = reader.read_number();
+                Value::Number(f)
+            }
+            b't' => Value::Boolean(true),
+            b'f' => Value::Boolean(false),
+            b'n' => Value::Null,
+            b',' | b':' | b' ' | b'\t' | b'\n' | b'\r' => {
+                reader.next();
+                continue;
+            }
+            _ => Value::NotExists,
         };
-        self.ch = ch;
-        ch
-    }
 
-    fn peek(&mut self) -> Option<u8> {
-        match self.ch {
-            Some(ch) => Some(ch),
-            None => self.next(),
-        }
+        return v;
     }
+    Value::NotExists
+}
 
-    fn mark(&self) -> usize {
-        self.offset
+
+pub fn get_from_str(raw: &str, path: &str) -> Value {
+    let mut reader = Parser::new(raw.as_bytes());
+    get_from_reader(&mut reader, path.as_bytes())
+}
+
+fn get_from_reader<R>(reader: &mut Parser<R>, path_u8: &[u8]) -> Value
+where
+    R: io::Read,
+{
+    let path = Path::from_utf8(path_u8);
+
+    while let Some(b) = reader.next() {
+        match b {
+            b'{' => return get_from_object(reader, &path),
+            b'[' => return get_from_array(reader, &path),
+            _ => continue,
+        };
     }
+    Value::NotExists
+}
 
-    fn slice(&self, start: usize) -> &[u8] {
-        if start < self.offset {
-            &self.buffer[start..self.offset]
-        } else {
-            &[]
-        }
-    }
+fn get_from_object<R>(reader: &mut Parser<R>, path: &Path) -> Value
+where
+    R: io::Read,
+{
+    reader.next();
+    println!("path {:?}", path);
 
-    fn slice_contains_last(&self, start: usize) -> &[u8] {
-        if start < self.offset {
-            &self.buffer[start..self.offset + 1]
-        } else {
-            &[]
-        }
-    }
+    let mut count = 0;
+    while let Some(b) = reader.peek() {
+        let v = match b {
+            b'"' => {
+                let s = reader.read_string();
+                Value::String(s)
+            }
+            c @ b'{' => {
+                let raw = reader.read_json();
+                Value::Object(raw, None)
+            }
+            c @ b'[' => {
+                let raw = reader.read_json();
+                Value::Array(raw, None)
+            }
+            b'0'...b'9' | b'-' => {
+                let raw = reader.read_number();
+                Value::Number(raw)
+            }
+            b't' => {
+                reader.skip(3);
+                Value::Boolean(true)
+            }
+            b'f' => {
+                reader.skip(4);
+                Value::Boolean(false)
+            }
+            b'n' => {
+                reader.skip(3);
+                Value::Null
+            }
+            _ => {
+                reader.next();
+                continue;
+            }
+        };
 
-    fn read_string(&mut self) -> String {
-        println!("parse str");
-        let start = self.mark() + 1;
-        while let Some(b) = self.next() {
-            match b {
-                b'"' => break,
-                b'\\' => {
-                    self.next();
-                }
-                _ => (),
+        reader.next();
+        println!("find value {:?}", v);
+
+        count += 1;
+
+        if count % 2 == 1 {
+            let key = match v {
+                Value::String(s) => s,
+                _ => panic!("invalid object key {:?}", v),
             };
-        }
 
-        String::from_utf8_lossy(self.slice(start)).to_string()
-    }
-
-    fn read_number(&mut self) -> f64 {
-        println!("parse number");
-        let start = self.mark();
-        while let Some(b) = self.peek() {
-            match b {
-                b'0'...b'9' => (),
-                b'-' | b'.' => (),
-                _ => break,
-            };
-            self.next();
-        }
-
-        let s = str::from_utf8(self.slice(start)).unwrap();
-        s.parse().unwrap()
-    }
-
-    fn read_json(&mut self) -> String {
-        println!("parse json");
-        let start = self.mark();
-        let mut depth = 1;
-        while let Some(b) = self.next() {
-            match b {
-                b'\\' => {
-                    self.next();
+            if path.match_part(&key) {
+                if path.more {
+                    return get_from_reader(reader, path.next);
                 }
-                b'[' | b'{' => depth += 1,
-                b']' | b'}' => {
-                    depth -= 1;
-                    if depth == 0 {
-                        break;
-                    }
-                }
-                _ => (),
+            
+                return parse_from_reader(reader);
             }
         }
-
-        let s = String::from_utf8_lossy(self.slice_contains_last(start)).to_string();
-        s
     }
+    Value::NotExists
 }
 
-pub trait ByteReader {
-    fn next(&mut self) -> Option<u8>;
+fn get_from_array<R>(p: &mut Parser<R>, path: &Path) -> Value
+where
+    R: io::Read,
+{
+    Value::NotExists
 }
+
 
 fn main() {
     let s = r#"{
-  "name\t": {"\}first\"": "Tom", "last": "Anderson"},
+  "name": {"\}first\"": "Tom", "last": "Anderson"},
   "age":37,
   "children": ["Sara","Alex","Jack"],
   "fav.movie": "Deer Hunter",
@@ -144,25 +167,9 @@ fn main() {
     {"first": "Jane", "last": "Murphy", "age": 47, "nets": ["ig", "tw"]}
   ]
 }"#;
-    let mut p = Parser::new(s.as_bytes());
-    p.next();
-    p.next();
-    while let Some(b) = p.peek() {
-        match b {
-            b'{' | b'[' => {
-                let j = p.read_json();
-                println!("got json {}", j);
-            }
-            b'"' => {
-                let s = p.read_string();
-                println!("got string [{}]", s);
-            }
-            b'-' | b'0'...b'9' => {
-                let n = p.read_number();
-                println!("got number [{}]", n);
-            }
-            _ => (),
-        };
-        p.next();
-    }
+    let v = get_from_str(s, "name");
+    println!("{:?}", v);
+
+    let v = get_from_str(s, "name.last");
+    println!("{:?}", v);
 }
