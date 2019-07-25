@@ -90,7 +90,7 @@ impl<'a> UTF8Reader<'a> {
     // TODO: use macro rule
 
     pub fn read_string(&mut self) -> String {
-        println!("parse str");
+        //  println!("parse str");
         let start = self.mark() + 1;
         while let Some(b) = self.next() {
             match b {
@@ -106,7 +106,7 @@ impl<'a> UTF8Reader<'a> {
     }
 
     pub fn read_number(&mut self) -> f64 {
-        println!("parse number");
+        //  println!("parse number");
         let start = self.mark();
         while let Some(b) = self.peek() {
             match b {
@@ -122,7 +122,7 @@ impl<'a> UTF8Reader<'a> {
     }
 
     pub fn read_json(&mut self) -> String {
-        println!("parse json");
+        //  println!("parse json");
         let start = self.mark();
         let mut depth = 1;
         while let Some(b) = self.next() {

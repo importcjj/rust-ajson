@@ -1,25 +1,23 @@
+use util;
+use parser::Parser;
 
-use crate::util;
-use crate::Parser;
-
-use crate::UTF8Reader;
-use crate::Value;
+use read::UTF8Reader;
+use value::Value;
 use std::str;
-
 
 use regex::Regex;
 use std::fmt;
 
 pub struct Path<'a> {
-    part: String,
+    pub part: String,
     pub next: &'a [u8],
     pub more: bool,
     wild: bool,
-    arrch: bool,
+    pub arrch: bool,
 
     pattern: Option<Regex>,
 
-    query: Option<Query<'a>>,
+    pub query: Query<'a>,
 }
 
 impl<'a> fmt::Debug for Path<'a> {
@@ -34,8 +32,8 @@ impl<'a> fmt::Debug for Path<'a> {
         write!(f, " more={} ", self.more)?;
         write!(f, " wild={} ", self.wild)?;
         write!(f, " arrch={}", self.arrch)?;
-        if self.query.is_some() {
-            write!(f, " query={:?}", self.query.as_ref().unwrap())?;
+        if self.query.on {
+            write!(f, " query={:?}", self.query)?;
         }
         write!(f, ">")
     }
@@ -51,7 +49,7 @@ impl<'a> Path<'a> {
             arrch: false,
             pattern: None,
 
-            query: None,
+            query: Query::empty() ,
         }
     }
 
@@ -77,7 +75,7 @@ impl<'a> Path<'a> {
                 }
                 b'[' | b'(' => {
                     if path.arrch {
-                        let q = Query::from_utf8_reader(&mut p, v);
+                        let q = Query::from_utf8_reader(&mut p, v).unwrap();
                         path.set_q(q);
                     }
                 }
@@ -91,7 +89,6 @@ impl<'a> Path<'a> {
         path
     }
 
-
     fn set_part(&mut self, v: &'a [u8]) {
         self.part = String::from_utf8_lossy(v).to_string();
         if self.wild {
@@ -103,24 +100,29 @@ impl<'a> Path<'a> {
     fn set_more(&mut self, b: bool) {
         self.more = b;
     }
+
     fn set_next(&mut self, v: &'a [u8]) {
         self.next = v;
     }
+
     fn set_wild(&mut self, b: bool) {
         self.wild = b;
     }
+
     fn set_arrch(&mut self, b: bool) {
         self.arrch = b;
     }
-    fn set_q(&mut self, q: Option<Query<'a>>) {
+
+    fn set_q(&mut self, q: Query<'a>) {
         self.query = q;
-    }
-    fn is_query_on(&self) -> bool {
-        self.query.is_some()
     }
 
     fn set_pattern(&mut self, p: Option<Regex>) {
         self.pattern = p;
+    }
+
+    pub fn is_query_on(&self) -> bool {
+        self.query.on
     }
 
     pub fn match_part(&self, key: &str) -> bool {
@@ -129,14 +131,13 @@ impl<'a> Path<'a> {
             None => (),
         };
         let eq = &self.part == key;
-        println!("match {} == {} => {}", self.part, key, eq);
+        //  println!("match {} == {} => {}", self.part, key, eq);
         eq
-        
     }
 }
 
 pub struct Query<'a> {
-    pub ok: bool,
+    pub on: bool,
     pub path: &'a [u8],
     pub op: Option<String>,
     pub value: Option<Value>,
@@ -146,7 +147,7 @@ pub struct Query<'a> {
 impl<'a> fmt::Debug for Query<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<Query")?;
-        write!(f, " ok={}", self.ok)?;
+        write!(f, " ok={}", self.on)?;
         write!(f, " all={}", self.all)?;
         write!(
             f,
@@ -163,8 +164,16 @@ impl<'a> fmt::Debug for Query<'a> {
     }
 }
 
-
 impl<'a> Query<'a> {
+    pub fn empty() -> Query<'a> {
+        Query {
+            on: false,
+            path: &[],
+            op: None,
+            value: None,
+            all: false,
+        }
+    }
 
     fn from_utf8(v: &'a [u8]) -> Option<Query<'a>> {
         let mut p = UTF8Reader::new(v);
@@ -175,7 +184,6 @@ impl<'a> Query<'a> {
     fn from_utf8_reader(p: &mut UTF8Reader, v: &'a [u8]) -> Option<Query<'a>> {
         let mut depth = 1;
         let mut j = 0;
-
 
         while let Some(b) = p.next() {
             match b {
@@ -241,7 +249,7 @@ impl<'a> Query<'a> {
 
             let op = new_p.head_contains_last(k);
             Some(Query {
-                ok: true,
+                on: true,
                 path: util::trim_space_u8(path),
                 op: Some(String::from_utf8_lossy(op).to_string()),
                 value: Some(value),
@@ -249,13 +257,17 @@ impl<'a> Query<'a> {
             })
         } else {
             Some(Query {
-                ok: true,
+                on: true,
                 path: util::trim_space_u8(util::safe_slice(v, 2, i)),
                 op: None,
                 value: None,
                 all,
             })
         }
+    }
+
+    pub fn is_match(&self, v: &Value) -> bool {
+        true
     }
 }
 
@@ -267,50 +279,49 @@ mod tests {
     fn test_parse_path() {
         let v = r#"name"#.as_bytes();
         let p = Path::from_utf8(&v);
-        println!("{:?}", p);
-
+        //  println!("{:?}", p);
 
         let v = r#"#(last=="Murphy")#.first"#.as_bytes();
         let p = Path::from_utf8(&v);
-        println!("{:?}", p);
+        //  println!("{:?}", p);
 
         let v = r#"friends.#(first!%"D*")#.last"#.as_bytes();
         let p = Path::from_utf8(&v);
-        println!("{:?}", p);
+        //  println!("{:?}", p);
 
         let v = r#"c?ildren.0"#.as_bytes();
         let p = Path::from_utf8(&v);
-        println!("{:?}", p);
+        //  println!("{:?}", p);
     }
 
     #[test]
     fn test_parse_query() {
         let v = "#(first)".as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        println!("{:?}", q);
+        //  println!("{:?}", q);
 
         let v = "#(first)#".as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        println!("{:?}", q);
+        //  println!("{:?}", q);
 
         let v = r#"#(first="name")"#.as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        println!("{:?}", q);
+        //  println!("{:?}", q);
 
         let v = r#"#(nets.#(=="ig"))"#.as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        println!("{:?}", q);
+        //  println!("{:?}", q);
 
         let v = r#"#(nets.#(=="ig"))#"#.as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        println!("{:?}", q);
+        //  println!("{:?}", q);
 
         let v = r#"#(=="ig")"#.as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        println!("{:?}", q);
+        //  println!("{:?}", q);
 
         let v = r#"#(first=)"#.as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        println!("{:?}", q);
+        //  println!("{:?}", q);
     }
 }
