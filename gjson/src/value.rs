@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use parser::Parser;
 use get_from_reader;
+use std::fmt::Debug;
 
 #[derive(PartialEq, Debug)]
 pub enum Value {
@@ -36,7 +37,7 @@ impl Value {
     pub fn as_str(&self) -> &str {
         match &self {
             Value::String(s) => s,
-            _ => ""
+            _ => "as_str not implementaion!!",
         }
     }
 

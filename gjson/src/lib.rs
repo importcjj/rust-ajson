@@ -5,7 +5,7 @@ mod parser;
 
 mod path;
 mod read;
-
+mod wild;
 mod util;
 mod value;
 use parser::Parser;
@@ -70,6 +70,7 @@ where
     let path = Path::from_utf8(path_u8);
 
     while let Some(b) = reader.next() {
+        println!("get from reader {}", String::from_utf8(vec![b]).unwrap());
         match b {
             b'{' => return get_from_object(reader, &path),
             b'[' => return get_from_array(reader, &path),
@@ -83,6 +84,7 @@ fn get_from_object<R>(reader: &mut Parser<R>, path: &Path) -> Value
 where
     R: io::Read,
 {
+    // println!("get from object {:?}", path);
     reader.next();
 
     let mut count = 0;
@@ -137,11 +139,11 @@ where
                 _ => panic!("invalid object key {:?}", v),
             };
 
-            if path.match_part(&key) {
+            if path.is_match(&key) {
                 if path.more {
                     return get_from_reader(reader, path.next);
                 }
-            
+
                 return parse_from_reader(reader);
             }
         }
@@ -153,6 +155,7 @@ fn get_from_array<R>(reader: &mut Parser<R>, path: &Path) -> Value
 where
     R: io::Read,
 {
+    // println!("get from array {:?}", path);
     reader.next();
     
     if !path.arrch {
@@ -168,11 +171,13 @@ where
     let mut elements: Vec<Value> = Vec::new();
 
     let process_query = |v: &Value| -> bool {
-        match v {
+        let hit = match v {
             Value::Array(raw, _) | Value::Object(raw, _) => {
                 let mut p = Parser::new(raw.as_bytes());
-                let res = get_from_reader(&mut p, query.path);
-                query.is_match(&res)
+                // let res = get_from_reader(&mut p, query.path);
+                
+                // query.is_match(&res)
+                return true
             }
             _ => {
                 if query.path.len() > 0 {
@@ -181,7 +186,10 @@ where
                     query.is_match(v)
                 } 
             }
-        }
+        };
+
+        // println!("does hit? {}", hit);
+        hit
     };
 
 
@@ -269,3 +277,30 @@ where
     Value::NotExists
 }
 
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+
+    #[test]
+    fn test_work() {
+                let json = r#"
+        {
+            "name": {"first": "Tom", "last": "Anderson"},
+            "age":37,
+            "children": ["Sara","Alex","Jack"],
+            "fav.movie": "Deer Hunter",
+            "friends": [
+                {"first": "Dale", "last": "Murphy", "age": 44, "addr": { "street": "a", "num": 1 }},
+                {"first": "Roger", "last": "Craig", "age": 68, "addr": { "street": "b", "num": 2 }},
+                {"first": "Jane", "last": "Murphy", "age": 47, "addr": { "street": "c", "num": 3 }},
+            ]
+        }"#;
+
+        println!("{:?}", get_from_str(json, r#"friends.#(first%"D*").addr"#));
+        println!("{:?}", get_from_str(json, r#"friends.#(first!%"D*")#.last"#));
+        println!("==============");
+    }
+}

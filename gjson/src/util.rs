@@ -31,6 +31,7 @@ pub fn trim_u8(v: &[u8], b: u8) -> &[u8] {
 }
 
 pub fn safe_slice<T>(v: &[T], start: usize, end: usize) -> &[T] {
+    // println!("start {}, end {}, len {}",start, end, v.len());
     if start < end && end <= v.len() {
         &v[start..end]
     } else {

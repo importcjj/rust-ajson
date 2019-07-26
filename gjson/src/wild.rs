@@ -1,3 +1,6 @@
-pub fn match(k1: &str, wild_k2: &str) -> bool {
-    k1.re
+use regex::Regex;
+
+pub fn is_match(k1: &str, pattern: &str) -> bool {
+    let pattern = &pattern.replace("?", ".").replace("*", ".+?");
+    Regex::new(pattern).unwrap().is_match(k1)
 }

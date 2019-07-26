@@ -1,4 +1,5 @@
 use std::str;
+use std::slice;
 
 pub struct UTF8Reader<'a> {
     pub source: &'a [u8],
@@ -25,8 +26,15 @@ impl<'a> UTF8Reader<'a> {
         self.length
     }
 
+    pub fn back(&mut self, offset: usize) {
+        if self.offset >= offset{
+            self.offset -= offset
+        }
+    }
+
+
     pub fn next(&mut self) -> Option<u8> {
-        if !self.start && self.offset < self.length {
+        if !self.start{
             self.start = true;
             Some(self.source[self.offset])
         } else if self.offset + 1 < self.length {
@@ -48,7 +56,10 @@ impl<'a> UTF8Reader<'a> {
 
     pub fn slice<'b>(&'b self, start: usize, end: usize) -> &'b [u8] {
         if start < end && end <= self.offset {
-            &self.source[start..end]
+            unsafe {
+                slice::from_raw_parts(self.source[start..end].as_ptr(), end-start+1)
+            }
+            
         } else {
             &[]
         }

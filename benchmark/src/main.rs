@@ -115,7 +115,10 @@ fn gjson_ex() {
         
         let d = gjson::get_from_str(BENCH_DATA, "widget.debug");
         
-        print!("{}", d.as_str());
+        println!("{}", d.as_str());
+
+        let e = gjson::get_from_str(BENCH_DATA, "widget.menu.#(sub_item>7)#.title");
+        println!("{:?}", e);
 }
 
 #[bench]
@@ -136,12 +139,12 @@ fn bench_json_rs(b: &mut Bencher) {
             .unwrap();
 
 
-        // let menu = &json::parse(BENCH_DATA).unwrap()["widget"]["menu"];
-        // let _v: Vec<&JsonValue> = menu
-        //     .members()
-        //     .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
-        //     .map(|x| &x["title"])
-        //     .collect();
+        let menu = &json::parse(BENCH_DATA).unwrap()["widget"]["menu"];
+        let _v: Vec<&JsonValue> = menu
+            .members()
+            .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
+            .map(|x| &x["title"])
+            .collect();
     })
 }
 
@@ -162,14 +165,14 @@ fn bench_serde_json(b: &mut Bencher) {
             .as_str()
             .unwrap();
 
-        // let menu = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["menu"];
-        // let _v: Vec<&Value> = menu
-        //     .as_array()
-        //     .unwrap()
-        //     .iter()
-        //     .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
-        //     .map(|x| &x["title"])
-        //     .collect();
+        let menu = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["menu"];
+        let _v: Vec<&Value> = menu
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
+            .map(|x| &x["title"])
+            .collect();
     })
 }
 
@@ -184,7 +187,7 @@ fn bench_gjson(b: &mut Bencher) {
             .as_str();
         gjson::get_from_str(BENCH_DATA, "widget.debug")
             .as_str();
-        // gjson::parse(BENCH_DATA).get("widget.menu.#(sub_item>7)#.title");
+        // gjson::get_from_str(BENCH_DATA, "widget.menu.#(sub_item>7)#.title");
     })
 }
 

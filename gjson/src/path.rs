@@ -1,12 +1,14 @@
-use util;
+
 use parser::Parser;
 
 use read::UTF8Reader;
-use value::Value;
-use std::str;
 
-use regex::Regex;
 use std::fmt;
+use util;
+
+
+use value::Value;
+use wild;
 
 pub struct Path<'a> {
     pub part: String,
@@ -14,8 +16,6 @@ pub struct Path<'a> {
     pub more: bool,
     wild: bool,
     pub arrch: bool,
-
-    pattern: Option<Regex>,
 
     pub query: Query<'a>,
 }
@@ -47,9 +47,8 @@ impl<'a> Path<'a> {
             more: false,
             wild: false,
             arrch: false,
-            pattern: None,
 
-            query: Query::empty() ,
+            query: Query::empty(),
         }
     }
 
@@ -65,6 +64,7 @@ impl<'a> Path<'a> {
                 b'.' => {
                     let end = p.mark();
                     path.set_part(util::safe_slice(v, 0, end));
+                    // path.set_part(p.slice(0, end));
                     path.set_next(util::safe_slice(v, end + 1, v.len()));
                     path.set_more(true);
                     return path;
@@ -75,6 +75,7 @@ impl<'a> Path<'a> {
                 }
                 b'[' | b'(' => {
                     if path.arrch {
+                        p.back(2);
                         let q = Query::from_utf8_reader(&mut p, v).unwrap();
                         path.set_q(q);
                     }
@@ -91,12 +92,9 @@ impl<'a> Path<'a> {
 
     fn set_part(&mut self, v: &'a [u8]) {
         self.part = String::from_utf8_lossy(v).to_string();
-        if self.wild {
-            self.part = self.part.replace("?", ".").replace("*", ".+?");
-            let re = Regex::new(&self.part).unwrap();
-            self.pattern = Some(re);
-        }
     }
+
+
     fn set_more(&mut self, b: bool) {
         self.more = b;
     }
@@ -117,21 +115,24 @@ impl<'a> Path<'a> {
         self.query = q;
     }
 
-    fn set_pattern(&mut self, p: Option<Regex>) {
-        self.pattern = p;
+    fn set_all(&mut self, b: bool) {
+        self.query.all = b;
     }
+
 
     pub fn is_query_on(&self) -> bool {
         self.query.on
     }
 
-    pub fn match_part(&self, key: &str) -> bool {
-        match &self.pattern {
-            Some(p) => return p.is_match(key),
-            None => (),
+    pub fn is_match(&self, key: &str) -> bool {
+
+        let eq = if self.wild {
+            wild::is_match(key, &self.part)
+        } else {
+            &self.part == key
         };
-        let eq = &self.part == key;
-        //  println!("match {} == {} => {}", self.part, key, eq);
+
+        // println!("match key {:?} == {:?} ? {}", self.part, key, eq);
         eq
     }
 }
@@ -185,6 +186,9 @@ impl<'a> Query<'a> {
         let mut depth = 1;
         let mut j = 0;
 
+        p.next();
+        p.next();
+
         while let Some(b) = p.next() {
             match b {
                 b'!' | b'=' | b'<' | b'>' | b'%' => {
@@ -214,11 +218,17 @@ impl<'a> Query<'a> {
         }
 
         let mut value = Value::NotExists;
-        let mut all = false;
         let i = p.mark();
-        if let Some(b'#') = p.next() {
-            all = true;
-        }
+
+        let all = if let Some(b'#') = p.next() {
+            true
+        } else {
+            p.back(1);
+            false
+        };
+
+
+
         if j > 0 {
             let path = util::safe_slice(v, 2, j);
             let mut k = 0;
@@ -267,7 +277,70 @@ impl<'a> Query<'a> {
     }
 
     pub fn is_match(&self, v: &Value) -> bool {
-        true
+        if !v.exists() {
+            return false;
+        }
+
+        let op = match &self.op {
+            Some(ref s) => s,
+            None => return true,
+        };
+
+        let target = self.value.as_ref().unwrap();
+
+        match &v {
+            Value::String(ref s1) => match target {
+                Value::String(ref s2) => match op.as_str() {
+                    "==" => s1 == s2,
+                    "=" => s1 == s2,
+                    "!=" => s1 != s2,
+                    ">" => s1 > s2,
+                    ">=" => s1 >= s2,
+                    "<" => s1 < s2,
+                    "<=" => s1 <= s2,
+                    "%" => wild::is_match(s1, s2),
+                    "!%" => !wild::is_match(s1, s2),
+                    _ => false,
+                },
+                _ => false,
+            },
+
+            Value::Number(f1) => match target {
+                Value::Number(f2) => match op.as_str() {
+                    "=" => f1 == f2,
+                    "==" => f1 == f2,
+                    "!=" => f1 != f2,
+                    "<" => f1 < f2,
+                    "<=" => f1 <= f2,
+                    ">" => f1 > f2,
+                    ">=" => f1 >= f2,
+                    _ => false,
+                },
+                _ => false,
+            },
+
+            Value::Boolean(b1) => match target {
+                Value::Boolean(b2) => match op.as_str() {
+                    "=" => b1 == b2,
+                    "==" => b1 == b2,
+                    "!=" => b1 != b2,
+                    "<" => b1 < b2,
+                    "<=" => b1 <= b2,
+                    ">" => b1 > b2,
+                    ">=" => b1 >= b2,
+                    _ => false,
+                },
+                _ => false,
+            },
+
+            Value::Null => match op.as_str() {
+                "=" => *v == Value::Null,
+                "==" => *v == Value::Null,
+                "!=" => *v != Value::Null,
+                _ => false,
+            },
+            _ => false,
+        }
     }
 }
 
@@ -292,36 +365,45 @@ mod tests {
         let v = r#"c?ildren.0"#.as_bytes();
         let p = Path::from_utf8(&v);
         //  println!("{:?}", p);
+
+        let v = r#"#(sub_item>7)#.title"#.as_bytes();
+        let p = Path::from_utf8(&v);
+        println!("{:?}", p);
     }
 
     #[test]
     fn test_parse_query() {
         let v = "#(first)".as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        //  println!("{:?}", q);
+        println!("{:?}", q);
 
         let v = "#(first)#".as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        //  println!("{:?}", q);
+        println!("{:?}", q);
 
         let v = r#"#(first="name")"#.as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        //  println!("{:?}", q);
+        println!("{:?}", q);
 
         let v = r#"#(nets.#(=="ig"))"#.as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        //  println!("{:?}", q);
+        println!("{:?}", q);
 
         let v = r#"#(nets.#(=="ig"))#"#.as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        //  println!("{:?}", q);
+        println!("{:?}", q);
 
         let v = r#"#(=="ig")"#.as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        //  println!("{:?}", q);
+        println!("{:?}", q);
 
         let v = r#"#(first=)"#.as_bytes();
         let q = Query::from_utf8(&v).unwrap();
-        //  println!("{:?}", q);
+        println!("{:?}", q);
+
+
+        let v = r#"#(sub_item>7)#.title"#.as_bytes();
+        let q = Query::from_utf8(&v).unwrap();
+        println!("{:?}", q);
     }
 }
