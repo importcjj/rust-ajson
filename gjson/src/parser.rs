@@ -1,6 +1,7 @@
 use std::io;
-use std::str;
 
+use std::slice;
+use std::str;
 pub struct Parser<R>
 where
     R: io::Read,
@@ -18,7 +19,7 @@ where
 {
     pub fn new(r: R) -> Parser<R> {
         Parser {
-            buffer: vec![],
+            buffer: Vec::with_capacity(1000),
             source: r,
             ch: None,
             length: 0,
@@ -30,11 +31,13 @@ where
         let mut c = [0; 1];
         let ch = match self.source.read(&mut c) {
             Ok(1) => {
-                self.buffer.push(c[0]);
                 self.length += 1;
+                
                 if self.ch.is_some() {
+                    
                     self.offset += 1;
                 }
+                self.buffer.push(c[0]);
                 Some(c[0])
             }
             _ => None,
@@ -54,41 +57,46 @@ where
         self.offset
     }
 
-    pub fn tail(&self, start: usize) -> &[u8] {
+    pub fn tail<'b>(&self, start: usize) -> &'b [u8] {
         if start < self.offset {
-            &self.buffer[start..self.offset]
+            let v = &self.buffer[start..self.offset];
+            unsafe { slice::from_raw_parts(v.as_ptr(), v.len()) }
         } else {
             &[]
         }
     }
 
-    pub fn head(&self, offset: usize) -> &[u8] {
+    pub fn head<'b>(&self, offset: usize) -> &'b [u8] {
         if offset <= self.offset {
-            &self.buffer[..offset]
+            let v = &self.buffer[..offset];
+            unsafe { slice::from_raw_parts(v.as_ptr(), v.len()) }
         } else {
             &[]
         }
     }
 
-    pub fn slice(&self, start: usize, end: usize) -> &[u8] {
+    pub fn slice<'b>(&self, start: usize, end: usize) -> &'b [u8] {
         if start < end && end <= self.offset {
-            &self.buffer[start..end]
+            let v = &self.buffer[start..end];
+            unsafe { slice::from_raw_parts(v.as_ptr(), v.len()) }
         } else {
             &[]
         }
     }
 
-    pub fn head_contains_last(&self, offset: usize) -> &[u8] {
+    pub fn head_contains_last<'b>(&self, offset: usize) -> &'b [u8] {
         if offset < self.offset {
-            &self.buffer[..offset + 1]
+            let v = &self.buffer[..offset + 1];
+            unsafe { slice::from_raw_parts(v.as_ptr(), v.len()) }
         } else {
             &[]
         }
     }
 
-    pub fn tail_contains_last(&self, start: usize) -> &[u8] {
+    pub fn tail_contains_last<'b>(&self, start: usize) -> &'b [u8] {
         if start < self.offset {
-            &self.buffer[start..self.offset + 1]
+            let v = &self.buffer[start..self.offset + 1];
+            unsafe { slice::from_raw_parts(v.as_ptr(), v.len()) }
         } else {
             &[]
         }
@@ -111,9 +119,30 @@ where
         String::from_utf8_lossy(self.tail(start)).to_string()
     }
 
-    pub fn read_number(&mut self) -> f64 {
-        // //  println!("parse number");
-        let start = self.mark();
+    pub fn read_string_uf8<'b>(&mut self) -> Vec<u8> {
+        // //  println!("parse str");
+        let mut buffer = vec![];
+        while let Some(b) = self.next() {
+            match b {
+                b'"' => break,
+                b'\\' => {
+                    self.next();
+                    buffer.push(b);
+                }
+                _ => (),
+            };
+            buffer.push(b);
+        }
+
+        // println!("get str {}",String::from_utf8_lossy(&buffer).to_string() );
+
+        buffer
+
+
+        // self.tail(start)
+    }
+
+    pub fn skip_number(&mut self) {
         while let Some(b) = self.peek() {
             match b {
                 b'0'...b'9' => (),
@@ -122,9 +151,22 @@ where
             };
             self.next();
         }
+    }
 
+    pub fn read_number_f64(&mut self) -> f64 {
+        // //  println!("parse number");
+        let start = self.mark();
+        self.skip_number();
         let s = str::from_utf8(self.tail(start)).unwrap();
         s.parse().unwrap()
+    }
+
+    pub fn read_number_utf8<'b>(&mut self) -> &'b [u8] {
+        let start = self.mark();
+        // println!("now at {:?}", self.peek());
+        self.skip_number();
+
+        self.tail(start)
     }
 
     pub fn skip(&mut self, i: usize) {
@@ -152,7 +194,14 @@ where
         }
     }
 
-    pub fn read_json(&mut self) -> String {
+    pub fn read_json_utf8<'b>(&mut self) -> &'b [u8] {
+        // //  println!("parse json");
+        let start = self.mark();
+        self.skip_json();
+        self.tail_contains_last(start)
+    }
+
+    pub fn read_json_string(&mut self) -> String {
         // //  println!("parse json");
         let start = self.mark();
         self.skip_json();

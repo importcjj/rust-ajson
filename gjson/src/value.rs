@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use parser::Parser;
 use get_from_reader;
 use std::fmt::Debug;
+use path::Path;
 
 #[derive(PartialEq, Debug)]
 pub enum Value {
@@ -17,10 +18,15 @@ pub enum Value {
 
 impl Value {
     pub fn get_utf8(&self, path: &[u8]) -> Value {
+        let p = Path::new_from_utf8(path);
+        self.get_path(&p)
+    }
+
+    pub fn get_path(&self, path: &Path) -> Value {
         match &self {
             Value::Object(raw, _) | Value::Array(raw, _) => {
                 let mut r = Parser::new(raw.as_bytes());
-                get_from_reader(&mut r, path)
+                get_from_reader(&mut r, path).to_value()
             }
             _ => Value::NotExists
         }

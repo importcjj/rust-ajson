@@ -54,10 +54,10 @@ impl<'a> UTF8Reader<'a> {
         }
     }
 
-    pub fn slice<'b>(&'b self, start: usize, end: usize) -> &'b [u8] {
+    pub fn slice<'b>(&self, start: usize, end: usize) -> &'b [u8] {
         if start < end && end <= self.offset {
             unsafe {
-                slice::from_raw_parts(self.source[start..end].as_ptr(), end-start+1)
+                slice::from_raw_parts(self.source[start..end].as_ptr(), end-start)
             }
             
         } else {
@@ -83,7 +83,10 @@ impl<'a> UTF8Reader<'a> {
 
     pub fn tail(&self, start: usize) -> &[u8] {
         if start < self.offset {
-            &self.source[start..self.offset]
+            unsafe {
+                let v = &self.source[start..self.offset];
+                slice::from_raw_parts(v.as_ptr() , v.len())
+            }  
         } else {
             &[]
         }

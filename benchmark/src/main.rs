@@ -165,14 +165,14 @@ fn bench_serde_json(b: &mut Bencher) {
             .as_str()
             .unwrap();
 
-        let menu = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["menu"];
-        let _v: Vec<&Value> = menu
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
-            .map(|x| &x["title"])
-            .collect();
+        // let menu = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["menu"];
+        // let _v: Vec<&Value> = menu
+        //     .as_array()
+        //     .unwrap()
+        //     .iter()
+        //     .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
+        //     .map(|x| &x["title"])
+        //     .collect();
     })
 }
 
@@ -187,7 +187,7 @@ fn bench_gjson(b: &mut Bencher) {
             .as_str();
         gjson::get_from_str(BENCH_DATA, "widget.debug")
             .as_str();
-        // gjson::get_from_str(BENCH_DATA, "widget.menu.#(sub_item>7)#.title");
+        gjson::get_from_str(BENCH_DATA, "widget.menu.#(sub_item>7)#.title");
     })
 }
 
