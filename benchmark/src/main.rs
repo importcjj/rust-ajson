@@ -100,25 +100,11 @@ fn gjson_ex() {
 //     let r = gjson::get(&json, r#"#.{field1,field2}"#);
 //     println!("===> {:?}", r.array());
 
-        let a = gjson::get_from_str(BENCH_DATA, "widget.window.name");
-        println!("{}", a.as_str());
-
-        let b = gjson::get_from_str(BENCH_DATA, "widget.image.hOffset")
-            .number();
-
-        println!("{}", b);
-
-        let c= gjson::get_from_str(BENCH_DATA, "widget.text.onMouseUp");
-
-                  
-        println!("{}", c.as_str());  
-        
-        let d = gjson::get_from_str(BENCH_DATA, "widget.debug");
-        
-        println!("{}", d.as_str());
-
-        let e = gjson::get_from_str(BENCH_DATA, "widget.menu.#(sub_item>7)#.title");
-        println!("{:?}", e);
+        println!("result {:?}", gjson::get(BENCH_DATA, "widget.window.name"));
+        println!("result {:?}", gjson::get(BENCH_DATA, "widget.image.hOffset"));
+        println!("result {:?}", gjson::get(BENCH_DATA, "widget.text.onMouseUp"));
+        println!("result {:?}", gjson::get(BENCH_DATA, "widget.debug"));
+        println!("result {:?}", gjson::get(BENCH_DATA, "widget.menu.#(sub_item>7)#.title"));
 }
 
 #[bench]
@@ -165,29 +151,25 @@ fn bench_serde_json(b: &mut Bencher) {
             .as_str()
             .unwrap();
 
-        // let menu = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["menu"];
-        // let _v: Vec<&Value> = menu
-        //     .as_array()
-        //     .unwrap()
-        //     .iter()
-        //     .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
-        //     .map(|x| &x["title"])
-        //     .collect();
+        let menu = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["menu"];
+        let _v: Vec<&Value> = menu
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
+            .map(|x| &x["title"])
+            .collect();
     })
 }
 
 #[bench]
 fn bench_gjson(b: &mut Bencher) {
     b.iter(|| {
-        gjson::get_from_str(BENCH_DATA, "widget.window.name")
-            .as_str();
-        gjson::get_from_str(BENCH_DATA, "widget.image.hOffset")
-            .number();
-        gjson::get_from_str(BENCH_DATA, "widget.text.onMouseUp")
-            .as_str();
-        gjson::get_from_str(BENCH_DATA, "widget.debug")
-            .as_str();
-        gjson::get_from_str(BENCH_DATA, "widget.menu.#(sub_item>7)#.title");
+        gjson::get(BENCH_DATA, "widget.window.name");
+        gjson::get(BENCH_DATA, "widget.image.hOffset").number();
+        gjson::get(BENCH_DATA, "widget.text.onMouseUp");
+        gjson::get(BENCH_DATA, "widget.debug");
+        gjson::get(BENCH_DATA, "widget.menu.#(sub_item>7)#.title")
     })
 }
 

@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "benchmark",
+    # "benchmark",
     "gjson",
-    "path"
+    # "path"
 ]

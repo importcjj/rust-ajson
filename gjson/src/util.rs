@@ -38,3 +38,39 @@ pub fn safe_slice<T>(v: &[T], start: usize, end: usize) -> &[T] {
         &[]
     }
 }
+
+pub fn equal_escape_u8(a: &[u8], b: &[u8]) -> bool {
+    // if !a.contains(&'\\') && !b.contains(&'\\') {
+    //     return a == b
+    // }
+
+    let mut i = 0;
+    let mut j = 0;
+
+    while i < a.len() && j < b.len() {
+        if a[i] == b'\\' {
+            i += 1
+        }
+
+        if b[j] == b'\\' {
+            j += 1
+        }
+
+        if i >= a.len() || j >= b.len() {
+            break;
+        }
+
+        if a[i] != b[j] {
+            return false;
+        }
+
+        i += 1;
+        j += 1;
+    }
+
+    if j != b.len() || i != a.len() {
+        false
+    } else {
+        true
+    }
+}
