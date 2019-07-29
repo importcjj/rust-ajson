@@ -104,7 +104,7 @@ fn gjson_ex() {
         println!("result {:?}", gjson::get(BENCH_DATA, "widget.image.hOffset"));
         println!("result {:?}", gjson::get(BENCH_DATA, "widget.text.onMouseUp"));
         println!("result {:?}", gjson::get(BENCH_DATA, "widget.debug"));
-        println!("result {:?}", gjson::get(BENCH_DATA, "widget.menu.#(sub_item>7)#.title"));
+        println!("result {:?}", gjson::get(BENCH_DATA, r#"widget.menu.#(title="help")#.title"#));
 }
 
 #[bench]

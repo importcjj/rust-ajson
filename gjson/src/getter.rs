@@ -3,6 +3,7 @@ use reader;
 use std::io;
 use std::str;
 use value;
+use read;
 
 pub struct Getter<R>
 where
@@ -94,7 +95,9 @@ where
     pub fn get(&mut self, path: &str) -> value::Value {
         // reset offset
         self.seek(0);
-        let path = Path::new_from_utf8(path.as_bytes());
+        // let path = Path::new_from_utf8(path.as_bytes());
+        let path = read::new_path(path.as_bytes());
+        
         let v = self.get_by_path(&path);
         if v.is_vector() {
             v.vector_to_value()
@@ -210,15 +213,14 @@ where
     }
 
     fn read_boolean_value(&mut self) -> ParserValue {
-        let (is_true, i) = match self.peek() {
-            Some(b't') => (true, 4),
-            Some(b'f') => (false, 5),
+        let is_true = match self.peek() {
+            Some(b't') => true,
+            Some(b'f') => false,
             _ => panic!("invalid boolean"),
         };
 
-        for _ in 0..i {
-            self.next_byte();
-        }
+        self.source.read_boolean_value();
+
 
         if is_true {
             ParserValue::Boolean(true)
@@ -228,10 +230,7 @@ where
     }
 
     fn read_null_value(&mut self) -> ParserValue {
-        for _ in 0..4 {
-            self.next_byte();
-        }
-
+        self.source.read_null_value();
         ParserValue::Null
     }
 
@@ -242,64 +241,24 @@ where
             _ => panic!("Not JSON"),
         };
 
-        let mut depth = 1;
-        let start = self.position();
 
-        while let Some(b) = self.next_byte() {
-            match b {
-                b'\\' => {
-                    self.next_byte();
-                }
-                b'[' | b'{' => depth += 1,
-                b']' | b'}' => {
-                    depth -= 1;
-                    if depth == 0 {
-                        self.next_byte();
-                        break;
-                    }
-                }
-                _ => (),
-            }
-        }
+        let (start, end) = self.source.read_json_value();
 
         if is_object {
-            ParserValue::Object(start, self.position())
+            ParserValue::Object(start, end)
         } else {
-            ParserValue::Array(start, self.position())
+            ParserValue::Array(start, end)
         }
     }
 
     fn read_str_value(&mut self) -> ParserValue {
-        let start = self.position();
-        let mut end = start;
-        while let Some(b) = self.next_byte() {
-            match b {
-                b'"' => {
-                    end = self.position();
-                    self.next_byte();
-                    break;
-                }
-                b'\\' => {
-                    self.next_byte();
-                }
-                _ => (),
-            }
-        }
-
+        let (start, end) = self.source.read_str_value();
         ParserValue::String(start, end)
     }
 
     fn read_number_value(&mut self) -> ParserValue {
-        let start = self.position();
-        while let Some(b) = self.next_byte() {
-            match b {
-                b'0'...b'9' => (),
-                b'-' | b'.' => (),
-                _ => break,
-            };
-        }
-
-        ParserValue::Number(start, self.position() - 1)
+        let (start, end) = self.source.read_number_value();
+        ParserValue::Number(start, end)
     }
 
     fn get_from_object(&mut self, path: &Path) -> ParserValue {
@@ -341,7 +300,7 @@ where
             Err(_) => (0, false),
         };
 
-        let query = &path.query;
+        let query = path.borrow_query();
         let query_key = query.get_key();
         let mut vector_str = String::new();
         let return_vector = (query.on && query.all) || (!query.on && path.more);

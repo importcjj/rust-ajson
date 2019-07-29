@@ -4,6 +4,7 @@ use util;
 use value::Value;
 use wild;
 
+
 static DEFAULT_NONE_PATH: Path = Path {
     ok: false,
     part: &[],
@@ -12,39 +13,39 @@ static DEFAULT_NONE_PATH: Path = Path {
     wild: false,
     arrch: false,
 
-    query: Query {
-        on: false,
-        path: &[],
-        key: None,
-        op: None,
-        value: None,
-        all: false,
-    },
+    query: None,
 };
 
 pub struct Path<'a> {
     pub ok: bool,
     pub part: &'a [u8],
     pub next: Option<Box<Path<'a>>>,
+    pub query: Option<Query<'a>>,
     pub more: bool,
     pub wild: bool,
     pub arrch: bool,
 
-    pub query: Query<'a>,
+    // pub query: Query<'a>,
 }
 
 impl<'a> fmt::Debug for Path<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<Path")?;
-        write!(f, " part=`{:?}` ", self.part)?;
-        if self.more {
-            write!(f, " next=`{:?}` ", self.next)?;
-        }
-        write!(f, " more={} ", self.more)?;
-        write!(f, " wild={} ", self.wild)?;
+        write!(f, " ok={}", self.ok)?;
+        write!(
+            f,
+            " part=`{:?}`",
+            String::from_utf8_lossy(self.part).to_string()
+        )?;
+
+        write!(f, " more={}", self.more)?;
+        write!(f, " wild={}", self.wild)?;
         write!(f, " arrch={}", self.arrch)?;
-        if self.query.on {
-            write!(f, " query={:?}", self.query)?;
+        if self.more {
+            write!(f, "\n=> next=`{:?}`", self.next.as_ref().unwrap())?;
+        }
+        if self.has_query() {
+            write!(f, "\n=> query={:?}", self.query)?;
         }
         write!(f, ">")
     }
@@ -60,7 +61,7 @@ impl<'a> Path<'a> {
             wild: false,
             arrch: false,
 
-            query: Query::empty(),
+            query: None,
         }
     }
 
@@ -95,7 +96,6 @@ impl<'a> Path<'a> {
                     if path.arrch {
                         reader.back(2);
                         let q = Query::from_utf8_reader(&mut reader).unwrap();
-                        // println!("query {:?}", q);
                         path.set_q(q);
                     }
                 }
@@ -180,7 +180,18 @@ impl<'a> Path<'a> {
     }
 
     pub fn set_q(&mut self, q: Query<'a>) {
-        self.query = q;
+        self.query = Some(q);
+    }
+
+    pub fn has_query(&self) -> bool {
+        self.query.is_some()
+    }
+
+    pub fn borrow_query(&self) -> &Query {
+        match self.query {
+            Some(_) => self.query.as_ref().unwrap(),
+            None => panic!("path has none query!"),
+        }
     }
 
     pub fn is_match(&self, key: &[u8]) -> bool {
@@ -209,16 +220,17 @@ impl<'a> fmt::Debug for Query<'a> {
         write!(f, "<Query")?;
         write!(f, " ok={}", self.on)?;
         write!(f, " all={}", self.all)?;
-        write!(
-            f,
-            " key=`{}`",
-            String::from_utf8_lossy(self.path).to_string()
-        )?;
+        if self.path.len()> 0 {
+            write!(f, "\n=> path=`{}`", String::from_utf8_lossy(self.path).to_string())?;
+        }
+        if self.key.is_some() {
+            write!(f, "\n=> key=`{:?}`", self.key.as_ref().unwrap())?;
+        }
         if self.op.is_some() {
-            write!(f, " op=`{}`", self.op.as_ref().unwrap())?;
+            write!(f, "\n=> op=`{}`", self.op.as_ref().unwrap())?;
         }
         if self.value.is_some() {
-            write!(f, " value=`{:?}`", self.value.as_ref().unwrap())?;
+            write!(f, "\n=> value=`{:?}`", self.value.as_ref().unwrap())?;
         }
         write!(f, ">")
     }
@@ -237,15 +249,26 @@ impl<'a> Query<'a> {
     }
 
     pub fn has_key(&self) -> bool {
-        self.path.len() > 0
+        self.key.is_some()
     }
 
-    pub fn get_key(&self) -> Path {
-        match self.has_key() {
-            true => Path::new_from_utf8(self.path),
-            false => Path::new(),
+    pub fn get_key(&self) -> &Path {
+        match self.key {
+            Some(_) => self.key.as_ref().unwrap(),
+            None => &DEFAULT_NONE_PATH,
         }
     }
+
+    // pub fn has_key(&self) -> bool {
+    //     self.path.len() > 0
+    // }
+
+    // pub fn get_key(&self) -> Path {
+    //     match self.has_key() {
+    //         true => Path::new_from_utf8(self.path),
+    //         false => Path::new(),
+    //     }
+    // }
 
     fn from_utf8(v: &'a [u8]) -> Option<Query<'a>> {
         let mut p = UTF8Reader::new(v);
@@ -348,8 +371,27 @@ impl<'a> Query<'a> {
         }
     }
 
+    pub fn set_op(&mut self, op: String) {
+        self.op = Some(op);
+    }
+
+    pub fn set_val(&mut self, val: Value) {
+        self.value = Some(val);
+    }
+
+    pub fn set_all(&mut self, all: bool) {
+        self.all = all;
+    }
+
     pub fn set_key(&mut self, key: Path<'a>) {
-        self.key = Some(Box::new(key));
+        if key.ok {
+            self.key = Some(Box::new(key));
+        }
+
+    }
+
+    pub fn set_on(&mut self, on: bool) {
+        self.on = true;
     }
 
     pub fn is_match(&self, v: &Value) -> bool {
