@@ -1,8 +1,8 @@
 use path_parser;
+use std::fmt;
 use util;
 use value::Value;
 use wild;
-use std::fmt;
 
 static DEFAULT_NONE_QUERY: Query = Query {
     on: false,
@@ -32,7 +32,6 @@ pub struct Path<'a> {
     pub more: bool,
     pub wild: bool,
     pub arrch: bool,
-
     // pub query: Query<'a>,
 }
 
@@ -72,8 +71,12 @@ impl<'a> Path<'a> {
         }
     }
 
+    // pub fn new_from_utf8(v: &'a [u8]) -> Path<'a> {
+    //     path_parser::new_path(v)
+    // }
+
     pub fn new_from_utf8(v: &'a [u8]) -> Path<'a> {
-        path_parser::new_path(v)
+        path_parser::parse_path_from_utf8(v)
     }
 
     pub fn set_part(&mut self, v: &'a [u8]) {
@@ -181,6 +184,17 @@ impl<'a> Query<'a> {
         }
     }
 
+    pub fn has_path(&self) -> bool {
+        self.path.len() > 0
+    }
+
+    pub fn get_path(&self) -> Path {
+        match self.has_path() {
+            true => path_parser::parse_path_from_utf8(self.path),
+            false => Path::new(),
+        }
+    }
+
     pub fn has_key(&self) -> bool {
         self.key.is_some()
     }
@@ -192,6 +206,9 @@ impl<'a> Query<'a> {
         }
     }
 
+    pub fn set_path(&mut self, v: &'a [u8]) {
+        self.path = v;
+    }
 
     pub fn set_op(&mut self, op: String) {
         self.op = Some(op);
@@ -209,7 +226,6 @@ impl<'a> Query<'a> {
         if key.ok {
             self.key = Some(Box::new(key));
         }
-
     }
 
     pub fn set_on(&mut self, on: bool) {

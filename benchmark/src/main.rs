@@ -107,17 +107,17 @@ fn gjson_ex() {
     "#;
 
         // println!("=>{:?}<=", gjson::get(example, r#"friends.#(nets.#(=="ig"))"#));
-        println!("=>{:?}<=", gjson::get(example, r#"friends.#(nets.)"#));
-        // println!("=>{:?}<=", gjson::get(example, r#"friends.#()"#));
+        // println!("=>{:?}<=", gjson::get(example, r#"friends.#(nets."#));
+        // println!("=>{:?}<=", gjson::get(example, r#"friends.#()#"#));
 //     let json: Vec<char> = example.chars().collect();
 //     let r = gjson::get(&json, r#"#.{field1,field2}"#);
 //     println!("===> {:?}", r.array());
 
-        // println!("result {:?}", gjson::get(BENCH_DATA, "widget.window.name"));
-        // println!("result {:?}", gjson::get(BENCH_DATA, "widget.image.hOffset"));
-        // println!("result {:?}", gjson::get(BENCH_DATA, "widget.text.onMouseUp"));
-        // println!("result {:?}", gjson::get(BENCH_DATA, "widget.debug"));
-        // println!("result {:?}", gjson::get(BENCH_DATA, r#"widget.menu.#(title="help")#.title"#));
+        println!("result {:?}", gjson::get(BENCH_DATA, "widget.window.name"));
+        println!("result {:?}", gjson::get(BENCH_DATA, "widget.image.hOffset"));
+        println!("result {:?}", gjson::get(BENCH_DATA, "widget.text.onMouseUp"));
+        println!("result {:?}", gjson::get(BENCH_DATA, "widget.debug"));
+        println!("result {:?}", gjson::get(BENCH_DATA, r#"widget.menu.#(title="help")#.title"#));
 }
 
 #[bench]

@@ -301,7 +301,9 @@ where
         };
 
         let query = path.borrow_query();
-        let query_key = query.get_key();
+        let query_key = query.get_path();
+        // println!("path {:?}", path);
+        // println!("query {:?}", query);
         let mut vector_str = String::new();
         let return_vector = (query.on && query.all) || (!query.on && path.more);
         if return_vector {
@@ -321,7 +323,7 @@ where
 
             // do query match
             if query.on {
-                let value_to_match = match query.has_key() {
+                let value_to_match = match query.has_path() {
                     true => {
                         let v = self.get_from_value(&v, &query_key);
                         self.parse_value(&v)

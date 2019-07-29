@@ -137,6 +137,9 @@ impl<'a> RefReader<'a> {
 
     // dangerous!!
     pub fn tail<'b>(&self, v: &'b [u8]) -> &'b [u8] {
+        if self.read_over {
+            return &[]
+        }
         &v[self.position()..]
     }
 
