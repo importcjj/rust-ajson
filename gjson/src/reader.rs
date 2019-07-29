@@ -62,7 +62,6 @@ pub trait ByteReader {
                 b']' | b'}' => {
                     depth -= 1;
                     if depth == 0 {
-                        self.next();
                         break;
                     }
                 }
@@ -70,17 +69,19 @@ pub trait ByteReader {
             }
         }
 
-        (start, self.position())
+        let end = self.position();
+        self.next();
+        (start, end)
     }
 
     fn read_str_value(&mut self) -> (usize, usize) {
         let start = self.position();
         let mut end = start;
+        let mut ok = false;
         while let Some(b) = self.next() {
             match b {
                 b'"' => {
-                    end = self.position();
-                    self.next();
+                    ok = true;
                     break;
                 }
                 b'\\' => {
@@ -90,6 +91,11 @@ pub trait ByteReader {
             }
         }
 
+        end = self.position();
+        if !ok {
+            end += 1;
+        }
+        self.next();
         (start, end)
     }
 

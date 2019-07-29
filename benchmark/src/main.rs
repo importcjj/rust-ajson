@@ -92,19 +92,32 @@ fn serde_json() {
 
 #[test]
 fn gjson_ex() {
-//     let example = r#"[
-//   { "field1": "value11", "field2": "value12", "field3": "value13" },
-//   { "field1": "value21", "field2": "value22", "field3": "value23" },
-// ]"#;
+    let example = r#"
+{
+    "name": {"first": "Tom", "last": "Anderson"},
+    "age":37,
+    "children": ["Sara","Alex","Jack"],
+    "fav.movie": "Deer Hunter",
+    "friends": [
+        {"first": "Dale", "last": "Murphy", "age": 44, "nets": ["ig", "fb", "tw"]},
+        {"first": "Roger", "last": "Craig", "age": 68, "nets": ["fb", "tw"]},
+        {"first": "Jane", "last": "Murphy", "age": 47, "nets": ["ig", "tw"]}
+    ]
+}
+    "#;
+
+        // println!("=>{:?}<=", gjson::get(example, r#"friends.#(nets.#(=="ig"))"#));
+        println!("=>{:?}<=", gjson::get(example, r#"friends.#(nets.)"#));
+        // println!("=>{:?}<=", gjson::get(example, r#"friends.#()"#));
 //     let json: Vec<char> = example.chars().collect();
 //     let r = gjson::get(&json, r#"#.{field1,field2}"#);
 //     println!("===> {:?}", r.array());
 
-        println!("result {:?}", gjson::get(BENCH_DATA, "widget.window.name"));
-        println!("result {:?}", gjson::get(BENCH_DATA, "widget.image.hOffset"));
-        println!("result {:?}", gjson::get(BENCH_DATA, "widget.text.onMouseUp"));
-        println!("result {:?}", gjson::get(BENCH_DATA, "widget.debug"));
-        println!("result {:?}", gjson::get(BENCH_DATA, r#"widget.menu.#(title="help")#.title"#));
+        // println!("result {:?}", gjson::get(BENCH_DATA, "widget.window.name"));
+        // println!("result {:?}", gjson::get(BENCH_DATA, "widget.image.hOffset"));
+        // println!("result {:?}", gjson::get(BENCH_DATA, "widget.text.onMouseUp"));
+        // println!("result {:?}", gjson::get(BENCH_DATA, "widget.debug"));
+        // println!("result {:?}", gjson::get(BENCH_DATA, r#"widget.menu.#(title="help")#.title"#));
 }
 
 #[bench]

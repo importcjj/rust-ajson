@@ -4,7 +4,7 @@ extern crate regex;
 mod getter;
 pub use getter::get;
 mod path;
-mod read;
+mod path_parser;
 mod util;
 mod value;
 mod wild;

@@ -1,9 +1,8 @@
 use path::Path;
 use reader;
-use std::io;
 use std::str;
 use value;
-use read;
+use std::io;
 
 pub struct Getter<R>
 where
@@ -60,7 +59,7 @@ where
 impl<'a> Getter<reader::RefReader<'a>> {
     pub fn new_from_utf8(v: &'a [u8]) -> Self {
         let rr = reader::RefReader::new(v);
-        Getter { source:rr }
+        Getter { source: rr }
     }
 }
 
@@ -96,8 +95,9 @@ where
         // reset offset
         self.seek(0);
         // let path = Path::new_from_utf8(path.as_bytes());
-        let path = read::new_path(path.as_bytes());
-        
+        let path = Path::new_from_utf8(path.as_bytes());
+        // println!("{:?}", path);
+
         let v = self.get_by_path(&path);
         if v.is_vector() {
             v.vector_to_value()
@@ -337,9 +337,11 @@ where
 
             if path.more {
                 v = self.get_from_value(&v, path.borrow_next());
-                if query.on && !query.all {
-                    return v;
-                }
+
+            }
+
+            if query.on && !query.all {
+                return v;
             }
 
             if return_vector {
@@ -347,6 +349,7 @@ where
                 vector_str.push(',');
             }
         }
+
         if return_vector {
             if vector_str.len() > 1 {
                 // remove last comma
