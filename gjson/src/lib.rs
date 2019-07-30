@@ -10,6 +10,7 @@ mod util;
 mod value;
 mod wild;
 mod reader;
+mod sub_selector;
 
 
 pub use value::Value;

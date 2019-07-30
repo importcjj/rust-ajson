@@ -75,10 +75,23 @@ impl<R> Getter<R>
 where
     R: reader::ByteReader,
 {
+    fn get_by_sub_selectors(&mut self, path: &str) -> value::Value {
+        value::Value::NotExist
+    }
+
     pub fn get(&mut self, path: &str) -> value::Value {
+        let bytes = path.as_bytes();
+        if bytes.len() > 0 {
+            match bytes[0] {
+                b'[' => (),
+                b'{' => (),
+                _ => ()
+            };
+        }
+
         // reset offset
         self.seek(0);
-        let path = Path::new_from_utf8(path.as_bytes());
+        let path = Path::new_from_utf8(bytes);
         let v = self.get_by_path(&path);
         if v.is_vector() {
             v.vector_to_value()
