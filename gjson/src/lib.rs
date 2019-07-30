@@ -2,7 +2,8 @@ extern crate regex;
 
 
 mod getter;
-pub use getter::get;
+pub use getter::{get, parse};
+
 mod path;
 mod path_parser;
 mod util;

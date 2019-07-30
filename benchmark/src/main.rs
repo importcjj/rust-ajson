@@ -13,6 +13,8 @@ use serde_json::Value;
 #[allow(unused_imports)]
 use test::Bencher;
 
+use std::collections::HashMap;
+
 #[allow(dead_code)]
 static BENCH_DATA: &'static str = r#"{
     "overflow": 9223372036854775808,
@@ -93,18 +95,42 @@ fn serde_json() {
 #[test]
 fn gjson_ex() {
     let example = r#"
-{
-    "name": {"first": "Tom", "last": "Anderson"},
-    "age":37,
-    "children": ["Sara","Alex","Jack"],
-    "fav.movie": "Deer Hunter",
-    "friends": [
-        {"first": "Dale", "last": "Murphy", "age": 44, "nets": ["ig", "fb", "tw"]},
-        {"first": "Roger", "last": "Craig", "age": 68, "nets": ["fb", "tw"]},
-        {"first": "Jane", "last": "Murphy", "age": 47, "nets": ["ig", "tw"]}
-    ]
+{"age":100, "name":{"here":"B\\\"R"},
+	"noop":{"what is a wren?":"a bird"},
+	"happy":true,"immortal":false,
+	"items":[1,2,3,{"tags":[1,2,3],"points":[[1,2],[3,4]]},4,5,6,7],
+	"arr":["1",2,"3",{"hello":"world"},"4",5],
+	"vals":[1,2,3,{"sadf":sdx"asdf"}],"name":{"first":"tom","last":null},
+	"created":"2014-05-16T08:28:06.989Z",
+	"loggy":{
+		"programmers": [
+    	    {
+    	        "firstName": "Brett",
+    	        "lastName": "McLaughlin",
+    	        "email": "aaaa",
+				"tag": "good"
+    	    },
+    	    {
+    	        "firstName": "Jason",
+    	        "lastName": "Hunter",
+    	        "email": "bbbb",
+				"tag": "bad"
+    	    },
+    	    {
+    	        "firstName": "Elliotte",
+    	        "lastName": "Harold",
+    	        "email": "cccc",
+				"tag":, "good"
+    	    },
+			{
+				"firstName": 1002.3,
+				"age": 101
+			}
+    	]
+	},
+	"lastly":{"yay":"final"}
 }
-    "#;
+"#;
 
         // println!("=>{:?}<=", gjson::get(example, r#"friends.#(nets.#(=="ig"))"#));
         // println!("=>{:?}<=", gjson::get(example, r#"friends.#(nets."#));
@@ -113,13 +139,14 @@ fn gjson_ex() {
 //     let r = gjson::get(&json, r#"#.{field1,field2}"#);
 //     println!("===> {:?}", r.array());
 
-        println!("result {:?}", gjson::get(example, r#"friends.#(nets.#(=="ig"))"#));
+        // println!("result {:?}", gjson::get(example, r#"friends.#(nets.#(=="ig"))#"#).as_array());
 
-        println!("result {:?}", gjson::get(BENCH_DATA, "widget.window.name"));
-        println!("result {:?}", gjson::get(BENCH_DATA, "widget.image.hOffset"));
-        println!("result {:?}", gjson::get(BENCH_DATA, "widget.text.onMouseUp"));
-        println!("result {:?}", gjson::get(BENCH_DATA, "widget.debug"));
-        println!("result {:?}", gjson::get(BENCH_DATA, r#"widget.menu.#(title="help")#"#));
+        // println!("result {}", gjson::get(BENCH_DATA, "widget.window.name"));
+        // println!("result {}", gjson::get(BENCH_DATA, "widget.image.hOffset"));
+        // println!("result {}", gjson::get(BENCH_DATA, "widget.text.onMouseUp"));
+        // println!("result {}", gjson::get(BENCH_DATA, "widget.debug"));
+        // println!("result {:?}", gjson::get(BENCH_DATA, "widget.menu.#(sub_item>=7)#.title").as_array());
+        println!("result {:?}", gjson::get(example, r#"loggy.programmers.#[tag="good"]#.firstName"#));
 }
 
 #[bench]
@@ -138,6 +165,8 @@ fn bench_json_rs(b: &mut Bencher) {
         let _d = &json::parse(BENCH_DATA).unwrap()["widget"]["debug"]
             .as_str()
             .unwrap();
+
+        let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
 
 
         let menu = &json::parse(BENCH_DATA).unwrap()["widget"]["menu"];
@@ -166,6 +195,8 @@ fn bench_serde_json(b: &mut Bencher) {
             .as_str()
             .unwrap();
 
+        let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
+
         let menu = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["menu"];
         let _v: Vec<&Value> = menu
             .as_array()
@@ -180,11 +211,12 @@ fn bench_serde_json(b: &mut Bencher) {
 #[bench]
 fn bench_gjson(b: &mut Bencher) {
     b.iter(|| {
-        gjson::get(BENCH_DATA, "widget.window.name");
-        gjson::get(BENCH_DATA, "widget.image.hOffset").number();
-        gjson::get(BENCH_DATA, "widget.text.onMouseUp");
-        gjson::get(BENCH_DATA, "widget.debug");
-        gjson::get(BENCH_DATA, "widget.menu.#(sub_item>7)#.title")
+        gjson::get(BENCH_DATA, "widget.window.name").as_str();
+        gjson::get(BENCH_DATA, "widget.image.hOffset").as_f64();
+        gjson::get(BENCH_DATA, "widget.text.onMouseUp").as_str();
+        gjson::get(BENCH_DATA, "widget.debug").as_str();
+        gjson::get(BENCH_DATA, "widget.text").as_map();
+        gjson::get(BENCH_DATA, "widget.menu.#(sub_item>7)#.title").as_array();
     })
 }
 

@@ -3,6 +3,7 @@ use std::fmt;
 use util;
 use value::Value;
 use wild;
+use std::str;
 
 static DEFAULT_NONE_QUERY: Query = Query {
     on: false,
@@ -76,7 +77,7 @@ impl<'a> Path<'a> {
     // }
 
     pub fn new_from_utf8(v: &'a [u8]) -> Path<'a> {
-        path_parser::parse_path_from_utf8(v)
+        path_parser::new_path_from_utf8(v)
     }
 
     pub fn set_part(&mut self, v: &'a [u8]) {
@@ -190,7 +191,7 @@ impl<'a> Query<'a> {
     pub fn get_path(&self) -> Path {
         match self.has_path() {
             true => {
-                path_parser::parse_path_from_utf8(self.path)
+                path_parser::new_path_from_utf8(self.path)
             },
             false => Path::new(),
         }
@@ -251,8 +252,8 @@ impl<'a> Query<'a> {
         let target = self.value.as_ref().unwrap();
 
         match &v {
-            Value::String(ref s1) => match target {
-                Value::String(ref s2) => match op.as_str() {
+            Value::String(s1) => match target {
+                Value::String(s2) => match op.as_str() {
                     "==" => s1 == s2,
                     "=" => s1 == s2,
                     "!=" => s1 != s2,
@@ -267,16 +268,18 @@ impl<'a> Query<'a> {
                 _ => false,
             },
 
-            Value::Number(f1) => match target {
-                Value::Number(f2) => match op.as_str() {
-                    "=" => f1 == f2,
-                    "==" => f1 == f2,
-                    "!=" => f1 != f2,
-                    "<" => f1 < f2,
-                    "<=" => f1 <= f2,
-                    ">" => f1 > f2,
-                    ">=" => f1 >= f2,
-                    _ => false,
+            Value::Number(_, f1) => match target {
+                Value::Number(_, f2) => {
+                    match op.as_str() {
+                        "=" => f1 == f2,
+                        "==" => f1 == f2,
+                        "!=" => f1 != f2,
+                        "<" => f1 < f2,
+                        "<=" => f1 <= f2,
+                        ">" => f1 > f2,
+                        ">=" => f1 >= f2,
+                        _ => false,
+                    }
                 },
                 _ => false,
             },

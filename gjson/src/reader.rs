@@ -1,7 +1,9 @@
 use std::io;
 
 pub trait ByteReader {
+    fn started(&self) -> bool;
     fn position(&self) -> usize;
+    fn offset(&self) -> usize;
     fn next(&mut self) -> Option<u8>;
     fn peek(&mut self) -> Option<u8>;
     fn seek(&mut self, new: usize);
@@ -104,11 +106,11 @@ pub trait ByteReader {
             match b {
                 b'0'...b'9' => (),
                 b'-' | b'.' => (),
-                _ => break,
+                _ => return (start, self.position() - 1),
             };
         }
 
-        (start, self.position() - 1)
+        (start, self.position())
     }
 }
 
@@ -116,10 +118,8 @@ pub trait ByteReader {
 pub struct RefReader<'a> {
     buffer: &'a [u8],
     offset: usize,
-    length: usize,
     max_offset: usize,
-    read_over: bool,
-    started: bool,
+    overflow: bool,
 }
 
 impl<'a> RefReader<'a> {
@@ -127,17 +127,16 @@ impl<'a> RefReader<'a> {
         RefReader {
             buffer: source,
             offset: 0,
-            length: source.len(),
             max_offset: source.len(),
-            read_over: source.len() == 0,
-            started: false,
+            overflow: false,
         }
     }
 
+
     // dangerous!!
     pub fn tail<'b>(&self, v: &'b [u8]) -> &'b [u8] {
-        if self.read_over {
-            return &[]
+        if self.overflow {
+            return &[];
         }
         &v[self.position()..]
     }
@@ -147,61 +146,63 @@ impl<'a> RefReader<'a> {
     }
 
     pub fn forward(&mut self, offset: usize) {
-        if self.position() + offset < self.max_offset {
-            let prev = self.position();
-            self.seek(prev + offset);
-        }
+        let prev = self.position();
+        self.seek(prev + offset);
     }
 }
 
 
 impl<'a> ByteReader for RefReader<'a> {
     fn position(&self) -> usize {
+        if !self.started() {
+            panic!("reader not started")
+        } else {
+            self.offset - 1
+        }
+    }
+
+    fn offset(&self) -> usize {
         self.offset
     }
+
+    fn started(&self) -> bool {
+        self.offset > 0
+    }
+
     fn next(&mut self) -> Option<u8> {
-        if self.read_over {
+        if self.overflow {
             return None;
         }
 
-        if !self.started {
-            self.started = true;
-            return Some(self.buffer[0]);
-        }
-
-        if self.length - self.offset == 1 {
-            self.read_over = true;
+        if self.offset == self.max_offset {
+            self.overflow = true;
             return None;
         }
 
-
+        let b = self.buffer[self.offset];
         self.offset += 1;
-        return Some(self.buffer[self.offset]);
+        Some(b)
     }
 
     fn peek(&mut self) -> Option<u8> {
-        if self.read_over {
+        if self.overflow {
             return None;
         }
 
-        if !self.started {
+        if !self.started() {
             self.next()
         } else {
-            Some(self.buffer[self.offset])
+            Some(self.buffer[self.offset - 1])
         }
     }
 
     fn seek(&mut self, new: usize) {
-        if new < self.length {
-            if self.read_over {
-                self.read_over = false;
-            }
-            self.started = true;
-            self.offset = new;
+        if new < self.max_offset {
+            self.offset = new + 1;
+            self.overflow = false;
         } else {
-            panic!("seek overflow");
+            self.offset = self.max_offset;
         }
-
     }
 
     fn slice(&self, start: usize, end: usize) -> &[u8] {
@@ -219,7 +220,7 @@ where
     length: usize,
     offset: usize,
     byte_buf: [u8; 1],
-    read_over: bool,
+    overflow: bool,
 }
 
 impl<R> LazyReader<R>
@@ -233,7 +234,7 @@ where
             offset: 0,
             length: 0,
             byte_buf: [0; 1],
-            read_over: false,
+            overflow: false,
         }
     }
 }
@@ -242,38 +243,46 @@ impl<R> ByteReader for LazyReader<R>
 where
     R: io::Read,
 {
-    fn position(&self) -> usize {
+    fn started(&self) -> bool {
+        self.offset > 0
+    }
+
+    fn offset(&self) -> usize {
         self.offset
     }
+
+    fn position(&self) -> usize {
+        if !self.started() {
+            panic!("reader not started")
+        } else {
+            self.offset - 1
+        }
+
+    }
     fn next(&mut self) -> Option<u8> {
-        if self.read_over {
+        if self.overflow {
             return None;
         }
 
-        if self.length == 0 || self.length - self.offset == 1 {
+        if self.length == self.offset {
             if let Ok(1) = self.source.read(&mut self.byte_buf) {
-                if self.length != 0 {
-                    self.offset += 1;
-                }
+                self.offset += 1;
                 self.length += 1;
                 self.buffer.push(self.byte_buf[0]);
                 return Some(self.byte_buf[0]);
             } else {
-                self.read_over = true;
+                self.overflow = true;
                 return None;
             }
         }
 
-        if self.length > 0 {
-            self.offset += 1;
-            return Some(self.buffer[self.offset]);
-        }
-
-        None
+        let b = self.buffer[self.offset];
+        self.offset += 1;
+        return Some(b);
     }
 
     fn peek(&mut self) -> Option<u8> {
-        if self.read_over {
+        if self.overflow {
             return None;
         }
 
@@ -285,11 +294,12 @@ where
     }
 
     fn seek(&mut self, new: usize) {
-        if self.read_over && new < self.length {
-            self.read_over = false;
+        if new < self.length {
+            self.offset = new + 1;
+            self.overflow = false;
+        } else {
+            self.offset = self.length;
         }
-
-        self.offset = new;
     }
 
     fn slice(&self, start: usize, end: usize) -> &[u8] {
