@@ -1,8 +1,9 @@
 use path::Path;
 use reader;
+use std::io;
 use std::str;
 use value;
-use std::io;
+
 
 pub struct Getter<R>
 where
@@ -41,7 +42,7 @@ impl ParserValue {
         if let ParserValue::Vector(s) = self {
             value::Value::Array(s, None)
         } else {
-            value::Value::NotExists
+            value::Value::NotExist
         }
     }
 }
@@ -123,6 +124,25 @@ where
         }
     }
 
+    fn write_vaue_to_buffer<'b>(&'b mut self, buffer: &mut String, v: &'b ParserValue) {
+        match *v {
+            ParserValue::String(start, end)
+            | ParserValue::Object(start, end)
+            | ParserValue::Array(start, end)
+            | ParserValue::Number(start, end) => {
+                let s = str::from_utf8(self.bytes_slice(start, end)).unwrap();
+                buffer.push_str(s)
+            }
+            ParserValue::Vector(ref s) => buffer.push_str(s),
+            ParserValue::Boolean(true) => buffer.push_str("true"),
+            ParserValue::Boolean(false) => buffer.push_str("false"),
+            ParserValue::NumberUsize(ref u) => buffer.push_str(&u.to_string()),
+            ParserValue::Null => buffer.push_str("null"),
+            _ => buffer.push_str(""),
+        };
+
+    }
+
     fn parse_value(&mut self, v: &ParserValue) -> value::Value {
         match *v {
             ParserValue::String(start, end) => {
@@ -148,13 +168,13 @@ where
             ParserValue::NumberUsize(u) => value::Value::Number(u as f64),
             ParserValue::Boolean(bool) => value::Value::Boolean(bool),
             ParserValue::Null => value::Value::Null,
-            _ => value::Value::NotExists,
+            _ => value::Value::NotExist,
         }
     }
 
     fn get_by_path(&mut self, path: &Path) -> ParserValue {
         if !path.ok {
-            return self.read_next_value();
+            return ParserValue::NotExist
         }
 
         while let Some(b) = self.peek() {
@@ -178,6 +198,10 @@ where
     }
 
     fn get_from_value(&mut self, value: &ParserValue, path: &Path) -> ParserValue {
+        if !path.ok {
+            return ParserValue::NotExist
+        }
+
         match value {
             ParserValue::Array(start, _) | ParserValue::Object(start, _) => {
                 let old = self.position();
@@ -263,7 +287,7 @@ where
 
     fn get_from_object(&mut self, path: &Path) -> ParserValue {
         // println!("get object by path {:?}", path);
-        // println!("{:?}",str::from_utf8(path.part) );
+
         let mut count = 0;
         loop {
             let v = self.read_next_value();
@@ -293,7 +317,11 @@ where
 
     fn get_from_array(&mut self, path: &Path) -> ParserValue {
         // println!("get array by path {:?}", path);
-        // println!("{:?}",str::from_utf8(path.part) );
+
+        if !path.arrch {
+            return ParserValue::NotExist;
+        }
+
         let mut count = 0;
         let (idx, idx_get) = match str::from_utf8(path.part).unwrap().parse::<usize>() {
             Ok(i) => (i, true),
@@ -302,10 +330,12 @@ where
 
         let query = path.borrow_query();
         let query_key = query.get_path();
+        
         // println!("path {:?}", path);
-        // println!("query {:?}", query);
+        // println!("query {:?} {}", query, query.has_path());
         let mut vector_str = String::new();
         let return_vector = (query.on && query.all) || (!query.on && path.more);
+        let return_first = query.on && !query.all;
         if return_vector {
             vector_str = String::with_capacity(100);
             vector_str.push('[');
@@ -322,6 +352,8 @@ where
             }
 
             // do query match
+            // println!("{:?}", self.value_to_raw_str(&v));
+            // println!("more {}", path.more);
             if query.on {
                 let value_to_match = match query.has_path() {
                     true => {
@@ -330,6 +362,8 @@ where
                     }
                     false => self.parse_value(&v),
                 };
+
+                println!();
                 if !query.is_match(&value_to_match) {
                     continue;
                 }
@@ -339,15 +373,17 @@ where
 
             if path.more {
                 v = self.get_from_value(&v, path.borrow_next());
-
+                if !v.exists() {
+                    continue;
+                }
             }
 
-            if query.on && !query.all {
+            if return_first {
                 return v;
             }
 
             if return_vector {
-                vector_str.push_str(self.value_to_raw_str(&v));
+                self.write_vaue_to_buffer(&mut vector_str, &v);
                 vector_str.push(',');
             }
         }
@@ -359,6 +395,8 @@ where
             }
             vector_str.push(']');
             ParserValue::Vector(vector_str)
+        } else if return_first {
+            ParserValue::NotExist
         } else if idx_get {
             ParserValue::NotExist
         } else {

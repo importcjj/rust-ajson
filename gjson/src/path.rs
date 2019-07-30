@@ -48,13 +48,13 @@ impl<'a> fmt::Debug for Path<'a> {
         write!(f, " more={}", self.more)?;
         write!(f, " wild={}", self.wild)?;
         write!(f, " arrch={}", self.arrch)?;
-        if self.more {
+        if self.next.is_some() {
             write!(f, "\n=> next=`{:?}`", self.next.as_ref().unwrap())?;
         }
         if self.has_query() {
             write!(f, "\n=> query={:?}", self.query)?;
         }
-        write!(f, ">")
+        write!(f, ">\n")
     }
 }
 
@@ -89,7 +89,6 @@ impl<'a> Path<'a> {
 
     pub fn set_next(&mut self, next: Path<'a>) {
         self.next = Some(Box::new(next));
-        self.more = true;
     }
 
     pub fn borrow_next(&self) -> &Path {
@@ -168,7 +167,7 @@ impl<'a> fmt::Debug for Query<'a> {
         if self.value.is_some() {
             write!(f, "\n=> value=`{:?}`", self.value.as_ref().unwrap())?;
         }
-        write!(f, ">")
+        write!(f, ">\n")
     }
 }
 
@@ -190,7 +189,9 @@ impl<'a> Query<'a> {
 
     pub fn get_path(&self) -> Path {
         match self.has_path() {
-            true => path_parser::parse_path_from_utf8(self.path),
+            true => {
+                path_parser::parse_path_from_utf8(self.path)
+            },
             false => Path::new(),
         }
     }
@@ -236,6 +237,10 @@ impl<'a> Query<'a> {
         // println!("match value {:?} {:?}",self, v);
         if !v.exists() {
             return false;
+        }
+
+        if self.value.is_none() {
+            return true;
         }
 
         let op = match &self.op {

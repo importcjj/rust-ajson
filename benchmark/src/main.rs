@@ -113,11 +113,13 @@ fn gjson_ex() {
 //     let r = gjson::get(&json, r#"#.{field1,field2}"#);
 //     println!("===> {:?}", r.array());
 
+        println!("result {:?}", gjson::get(example, r#"friends.#(nets.#(=="ig"))"#));
+
         println!("result {:?}", gjson::get(BENCH_DATA, "widget.window.name"));
         println!("result {:?}", gjson::get(BENCH_DATA, "widget.image.hOffset"));
         println!("result {:?}", gjson::get(BENCH_DATA, "widget.text.onMouseUp"));
         println!("result {:?}", gjson::get(BENCH_DATA, "widget.debug"));
-        println!("result {:?}", gjson::get(BENCH_DATA, r#"widget.menu.#(title="help")#.title"#));
+        println!("result {:?}", gjson::get(BENCH_DATA, r#"widget.menu.#(title="help")#"#));
 }
 
 #[bench]

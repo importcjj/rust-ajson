@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::str;
+use std::cmp;
 
 #[derive(PartialEq, Debug)]
 pub enum Value {
@@ -9,13 +10,13 @@ pub enum Value {
     Array(String, Option<Vec<Value>>),
     Boolean(bool),
     Null,
-    NotExists,
+    NotExist,
 }
 
 
 impl Value {
     pub fn exists(&self) -> bool {
-        *self != Value::NotExists
+        *self != Value::NotExist
     }
 
     pub fn to_string(&self) -> String {
@@ -26,7 +27,7 @@ impl Value {
             Value::Boolean(false) => "false".to_owned(),
             Value::Object(ref s, _) => s.clone(),
             Value::Array(ref s, _) => s.clone(),
-            Value::NotExists => "".to_owned(),
+            Value::NotExist => "".to_owned(),
             Value::Null => "null".to_owned(),
         }
     }
@@ -42,6 +43,31 @@ impl Value {
         match &self {
             Value::Number(ref f) => *f,
             _ => 0.0
+        }
+    }
+}
+
+impl cmp::PartialEq<&str> for Value {
+    fn eq(&self, other: &&str) -> bool {
+        match &self {
+            Value::String(ref s) => s == *other,
+            Value::Number(f) => &f.to_string() == *other,
+            Value::Boolean(true) => "true" == *other,
+            Value::Boolean(false) => "false" == *other,
+            Value::Object(ref s, _) => s == *other,
+            Value::Array(ref s, _) => s == *other,
+            Value::NotExist => "" == *other,
+            Value::Null => "null" == *other,
+        }
+    }
+}
+
+impl cmp::PartialEq<f64> for Value {
+    fn eq(&self, other: &f64) -> bool {
+        match *self {
+            Value::Number(f) => f == *other,
+            Value::Boolean(true) => 1.0 == *other,
+            _ => 0.0 == *other,
         }
     }
 }

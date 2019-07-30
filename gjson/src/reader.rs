@@ -90,7 +90,6 @@ pub trait ByteReader {
                 _ => (),
             }
         }
-
         end = self.position();
         if !ok {
             end += 1;

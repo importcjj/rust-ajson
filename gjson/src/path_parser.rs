@@ -28,11 +28,14 @@ fn parser_query_value(v: &[u8]) -> (Value, usize) {
                 Value::Null
             }
             b'"' => {
-                // println!("======");
                 let (start, end) = reader.read_str_value();
-                let raw = reader.slice(start + 1, end - 1);
-                let s = String::from_utf8_lossy(raw).to_string();
-                Value::String(s)
+                if end - start < 2 {
+                    Value::NotExist
+                } else {
+                    let raw = reader.slice(start + 1, end - 1);
+                    let s = String::from_utf8_lossy(raw).to_string();
+                    Value::String(s)
+                }
                 // Value::Null
             }
             b'0'...b'9' | b'-' => {
@@ -42,13 +45,13 @@ fn parser_query_value(v: &[u8]) -> (Value, usize) {
                 let f = str::from_utf8(raw).unwrap().parse().unwrap();
                 Value::Number(f)
             }
-            _ => Value::NotExists,
+            _ => Value::NotExist,
         };
 
         return (value, reader.position());
     }
 
-    (Value::NotExists, reader.position())
+    (Value::NotExist, reader.position())
 }
 
 fn parse_query<'a>(v: &'a [u8]) -> (Query<'a>, usize) {
@@ -113,9 +116,9 @@ fn parse_query<'a>(v: &'a [u8]) -> (Query<'a>, usize) {
     (q, reader.position())
 }
 
-fn parse_query_from_utf8<'a>(v: &'a [u8]) -> Query<'a> {
+fn parse_query_from_utf8<'a>(v: &'a [u8]) -> (Query<'a>, usize) {
     if v.len() == 0 {
-        return Query::empty();
+        return (Query::empty(), 0)
     }
     // println!("parse query {:?}", String::from_utf8_lossy(v));
     let mut reader = reader::RefReader::new(v);
@@ -124,6 +127,7 @@ fn parse_query_from_utf8<'a>(v: &'a [u8]) -> Query<'a> {
     let mut op_start = 0;
     let mut op_exsit = false;
     let mut op_end = 0;
+    
 
     while let Some(b) = reader.peek() {
         match b {
@@ -154,9 +158,13 @@ fn parse_query_from_utf8<'a>(v: &'a [u8]) -> Query<'a> {
             _ => {
                 if op_exsit {
                     let (val, offset) = parser_query_value(reader.tail(v));
-                    q.set_val(val);
-                    reader.forward(offset);
-                    continue;
+                    if val.exists() {
+                        q.set_val(val);
+                    }
+
+                    if offset > 1 {
+                        reader.forward(offset-1);
+                    }
                 }
             }
         };
@@ -164,6 +172,7 @@ fn parse_query_from_utf8<'a>(v: &'a [u8]) -> Query<'a> {
         reader.next();
     }
 
+    q.set_on(true);
     
     if op_exsit {
         q.set_path(util::trim_space_u8(&v[..op_start]));
@@ -171,8 +180,9 @@ fn parse_query_from_utf8<'a>(v: &'a [u8]) -> Query<'a> {
     } else {
         q.set_path(util::trim_space_u8(v));
     }
-    q.set_on(true);
-    q
+
+
+    (q, reader.position())
 }
 
 pub fn parse_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
@@ -201,11 +211,11 @@ pub fn parse_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
                 let end = reader.position() - 1;
                 current_path.set_part(reader.head(v, end));
                 current_path.set_ok(true);
+                current_path.set_more(true);
                 reader.next();
                 let next = parse_path_from_utf8(reader.tail(v));
                 if next.ok {
                     current_path.set_next(next);
-                    current_path.set_more(true);
                 }
                 return current_path;
             }
@@ -215,8 +225,10 @@ pub fn parse_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
                 depth += 1;
                 if depth == 1 && current_path.arrch {
                     reader.next();
-                    let query = parse_query_from_utf8(reader.tail(v));
+                    let (query, offset) = parse_query_from_utf8(reader.tail(v));
                     current_path.set_q(query);
+                    reader.forward(offset);
+ 
                 }
             }
             _ => (),
