@@ -1,5 +1,8 @@
 
-<h1 align="center">GJSON</h1>
+<h1 align="center">
+  <span style="background: #000;color:#dea584;padding-left:5px;">G</span>
+  <span style="background: #000;color:#fff;padding-right:5px;">JSON</span>
+</h1>
 
 <div align="center">
 
