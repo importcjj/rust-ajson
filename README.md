@@ -4,11 +4,18 @@
 </h1>
 
 <div align="center">
+<p>Get JSON values quickly - JSON Parser for Rust</p>
 
 <a href="https://github.com/importcjj/gjson">
 <img src="https://travis-ci.com/importcjj/gjson2.svg?token=ZZrg3rRkUA8NUGrjEsU9&branch=master"></a>
-</div>
 
+
+<a href="https://importcjj.github.io/rust-gjson-playground/">
+<img src="https://img.shields.io/badge/goto-playground-orange">
+</a>
+
+
+</div>
 ## Usage
 
 JSON example
