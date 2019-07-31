@@ -1,6 +1,6 @@
 
 ## GJSON
-
+[![Build Status](https://travis-ci.com/importcjj/gjson.svg?token=ZZrg3rRkUA8NUGrjEsU9&branch=master)](https://travis-ci.com/importcjj/gjson)
 
 ## Usage
 
