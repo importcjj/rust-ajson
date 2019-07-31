@@ -8,6 +8,7 @@
 <a href="https://github.com/importcjj/gjson">
 <img src="https://travis-ci.com/importcjj/gjson2.svg?token=ZZrg3rRkUA8NUGrjEsU9&branch=master"></a>
 </div>
+
 ## Usage
 
 JSON example
