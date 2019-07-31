@@ -1,7 +1,6 @@
 use path::{Path, Query};
 use reader;
 use reader::ByteReader;
-use std::str;
 use util;
 use value::Value;
 

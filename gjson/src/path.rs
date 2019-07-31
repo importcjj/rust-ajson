@@ -3,7 +3,6 @@ use std::fmt;
 use util;
 use value::Value;
 use wild;
-use std::str;
 
 static DEFAULT_NONE_QUERY: Query = Query {
     on: false,
@@ -231,7 +230,7 @@ impl<'a> Query<'a> {
     }
 
     pub fn set_on(&mut self, on: bool) {
-        self.on = true;
+        self.on = on;
     }
 
     pub fn is_match(&self, v: &Value) -> bool {

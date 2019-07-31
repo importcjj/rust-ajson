@@ -13,7 +13,6 @@ use serde_json::Value;
 #[allow(unused_imports)]
 use test::Bencher;
 
-use std::collections::HashMap;
 
 #[allow(dead_code)]
 static BENCH_DATA: &'static str = r#"{

@@ -12,4 +12,4 @@ matrix:
 cache: cargo
 script:
   - cargo build --verbose --all
-  - cargo test --verbose --all
+  - cd gjson && cargo test --verbose --all
