@@ -55,8 +55,26 @@ friends.#(nets.#(=="fb"))#.first  >> ["Dale","Roger"]
 
 ## Performance
 
+Benchmarks => [gjson](https://github.com/importcjj/gjson), [serde_json](https://github.com/serde-rs/json), [rust-json](https://github.com/maciejhirsz/json-rust)
+
 ```
-test bench_gjson      ... bench:       6,714 ns/iter (+/- 275)
-test bench_json_rs    ... bench:      25,019 ns/iter (+/- 2,709)
-test bench_serde_json ... bench:      60,042 ns/iter (+/- 7,529)
+gjson benchmark         time:   [6.7000 us 6.8023 us 6.9081 us]                             
+                        change: [-1.8368% -0.4152% +1.0466%] (p = 0.58 > 0.05)
+                        No change in performance detected.
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+
+serde_json benchmark    time:   [48.196 us 48.543 us 48.947 us]                                  
+                        change: [+2.9073% +4.4909% +6.3532%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 3 outliers among 100 measurements (3.00%)
+  1 (1.00%) high mild
+  2 (2.00%) high severe
+
+json-rust benchmark     time:   [24.540 us 24.773 us 25.061 us]                                 
+                        change: [+4.8288% +6.0452% +7.4633%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 5 outliers among 100 measurements (5.00%)
+  4 (4.00%) high mild
+  1 (1.00%) high severe
 ```

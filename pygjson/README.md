@@ -1,1 +1,0 @@
-install_name_tool -change @rpath/libstd-35a5fe676abd4e5d.dylib /Users/helloworld/.rustup/toolchains/nightly-x86_64-apple-darwin/lib/libstd-35a5fe676abd4e5d.dylib libpygjson.dylib
