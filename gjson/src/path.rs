@@ -50,17 +50,17 @@ impl<'a> fmt::Debug for Path<'a> {
         write!(f, " wild={}", self.wild)?;
         write!(f, " arrch={}", self.arrch)?;
         if self.next.is_some() {
-            write!(f, "\n=> next=`{:?}`", self.next.as_ref().unwrap())?;
+            write!(f, " next=`{:?}`", self.next.as_ref().unwrap())?;
         }
         if self.has_query() {
-            write!(f, "\n=> query={:?}", self.query)?;
+            write!(f, " query={:?}", self.query)?;
         }
-        write!(f, ">\n")
+        write!(f, ">")
     }
 }
 
 impl<'a> Path<'a> {
-    pub fn new() -> Path<'a> {
+    pub fn empty() -> Path<'a> {
         Path {
             ok: false,
             part: &[],
@@ -155,20 +155,20 @@ impl<'a> fmt::Debug for Query<'a> {
         if self.path.len() > 0 {
             write!(
                 f,
-                "\n=> path=`{}`",
+                " path=`{}`",
                 String::from_utf8_lossy(self.path).to_string()
             )?;
         }
         if self.key.is_some() {
-            write!(f, "\n=> key=`{:?}`", self.key.as_ref().unwrap())?;
+            write!(f, " key=`{:?}`", self.key.as_ref().unwrap())?;
         }
         if self.op.is_some() {
-            write!(f, "\n=> op=`{}`", self.op.as_ref().unwrap())?;
+            write!(f, " op=`{}`", self.op.as_ref().unwrap())?;
         }
         if self.value.is_some() {
-            write!(f, "\n=> value=`{:?}`", self.value.as_ref().unwrap())?;
+            write!(f, " value=`{:?}`", self.value.as_ref().unwrap())?;
         }
-        write!(f, ">\n")
+        write!(f, ">")
     }
 }
 
@@ -193,7 +193,7 @@ impl<'a> Query<'a> {
             true => {
                 path_parser::new_path_from_utf8(self.path)
             },
-            false => Path::new(),
+            false => Path::empty(),
         }
     }
 

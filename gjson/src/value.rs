@@ -1,14 +1,14 @@
+use getter::Getter;
+use std::cmp;
 use std::collections::HashMap;
 use std::str;
-use std::cmp;
 use std::fmt;
-use getter::Getter;
 
 
 #[derive(PartialEq, Clone)]
 pub enum Value {
     String(String),
-    Number(Vec<u8>, f64),
+    Number(String, f64),
     Object(String),
     Array(String),
     Boolean(bool),
@@ -18,20 +18,11 @@ pub enum Value {
 
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // write!(f, "<G")?;
-        // match &self {
-        //     Value::String(_) => write!(f, "String")?,
-        //     Value::Number(_, _) => write!(f, "Number")?,
-        //     Value::Boolean(_) => write!(f, "Bool")?,
-        //     Value::Object(_) => write!(f, "Object")?,
-        //     Value::Array(_) => write!(f, "Array")?,
-        //     Value::NotExist => write!(f, "NotExsit")?,
-        //     Value::Null => write!(f, "Null")?
-        // };
-
-        // write!(f, " {} >", self.as_str())
-
-        write!(f, "{}", self.as_str())
+        match self {
+            Value::NotExist => write!(f, "<NOT EXSIT>"),
+            Value::String(_) => write!(f, r#""{}""#, self.as_str()),
+            _ => write!(f, "{}", self.as_str())
+        }
     }
 }
 
@@ -43,8 +34,12 @@ impl fmt::Display for Value {
 
 impl Value {
     pub fn get(&self, path: &str) -> Value {
+        self.get_by_utf8(&path.as_bytes())
+    }
+
+    pub fn get_by_utf8(&self, v: &[u8]) -> Value {
         match self {
-            Value::Array(s) | Value::Object(s) => Getter::from_str(s).get(path),
+            Value::Array(s) | Value::Object(s) => Getter::from_str(s).get_by_utf8(v),
             _ => Value::NotExist,
         }
     }
@@ -55,20 +50,20 @@ impl Value {
         match self {
             Value::String(_) => true,
             _ => false,
-        }    
+        }
     }
 
     pub fn is_array(&self) -> bool {
         match self {
             Value::Array(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_object(&self) -> bool {
         match self {
             Value::Object(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -88,7 +83,7 @@ impl Value {
     pub fn as_str(&self) -> &str {
         match &self {
             Value::String(ref s) => s,
-            Value::Number(raw, _) => str::from_utf8(raw).unwrap(),
+            Value::Number(ref s, _) => s,
             Value::Boolean(true) => "true",
             Value::Boolean(false) => "false",
             Value::Object(ref s) => s,
@@ -102,7 +97,7 @@ impl Value {
         match *self {
             Value::Number(_, f) => f,
             Value::Boolean(true) => 1.0,
-            _ => 0.0
+            _ => 0.0,
         }
     }
 
@@ -117,26 +112,22 @@ impl Value {
     pub fn as_bool(&self) -> bool {
         match *self {
             Value::Boolean(b) => b,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn as_array(&self) -> Vec<Value> {
         match self {
-            Value::Array(s) => {
-                Getter::from_str(s).as_array()
-            }
-            Value::NotExist => vec![],
-            _ => vec![self.clone()]
+            Value::Array(s) => Getter::from_str(s).as_array(),
+            Value::Null | Value::NotExist => vec![],
+            _ => vec![self.clone()],
         }
     }
 
     pub fn as_map(&self) -> HashMap<String, Value> {
         match self {
-            Value::Object(s) => {
-                Getter::from_str(s).as_map()
-            }
-            _ => HashMap::new()
+            Value::Object(s) => Getter::from_str(s).as_map(),
+            _ => HashMap::new(),
         }
     }
 }

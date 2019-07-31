@@ -1,9 +1,9 @@
 use reader;
 use reader::ByteReader;
-use util;
+
 use std::fmt;
 use std::str;
-
+use util;
 
 pub struct SubSelector<'a> {
     pub name: &'a [u8],
@@ -30,7 +30,7 @@ fn last_of_name(v: &[u8]) -> &[u8] {
     for mut i in (0..v.len()).rev() {
         match v[i] {
             b'\\' => i -= 1,
-            b'.' => return &v[i+1..],
+            b'.' => return &v[i + 1..],
             _ => (),
         }
     }
@@ -47,15 +47,18 @@ pub fn parse_selectors_from_utf8<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usiz
 
     macro_rules! push_sel {
         () => {{
-            let sel = if colon == 0 {
-                let key = last_of_name(&v[start.. reader.position()]);
-                SubSelector::new(key, &v[start.. reader.position()])
-            } else {
-                let key = util::trim_u8(&v[start..colon], b'"');
-                SubSelector::new(key, &v[colon + 1.. reader.position()])
-            };
+            if start < reader.position() {
+                let sel = if colon == 0 {
+                    let key = last_of_name(&v[start..reader.position()]);
+                    SubSelector::new(key, &v[start..reader.position()])
+                } else {
+                    let key = util::trim_u8(&v[start..colon], b'"');
+                    SubSelector::new(key, &v[colon + 1..reader.position()])
+                };
+                sels.push(sel);
+            }
 
-            sels.push(sel);
+
             colon = 0;
             start = reader.offset();
         }};
@@ -63,11 +66,13 @@ pub fn parse_selectors_from_utf8<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usiz
 
     while let Some(b) = reader.peek() {
         match b {
-            b'\\' => {reader.next();},
+            b'\\' => {
+                reader.next();
+            }
             b'"' => {
                 reader.read_str_value();
                 continue;
-            },
+            }
             b':' => {
                 if depth == 1 {
                     colon = reader.position();
@@ -84,7 +89,7 @@ pub fn parse_selectors_from_utf8<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usiz
                     start = reader.position() + 1;
                 }
             }
-                        
+
             b']' | b')' | b'}' => {
                 depth -= 1;
                 if depth == 0 {
@@ -97,7 +102,7 @@ pub fn parse_selectors_from_utf8<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usiz
         }
 
         reader.next();
-    };
+    }
 
     (vec![], 0, false)
 }
@@ -109,6 +114,12 @@ mod tests {
     #[test]
     fn test_parse_selectors_from_utf8() {
         let path = r#"{name.first,age,murphys:friends.#(last="Murphy")#.first}"#;
+        let (sels, length, ok) = parse_selectors_from_utf8(path.as_bytes());
+        println!("length {}", length);
+        println!("ok {}", ok);
+        println!("sels {:?}", sels);
+
+        let path = r#"[name,a]"#;
         let (sels, length, ok) = parse_selectors_from_utf8(path.as_bytes());
         println!("length {}", length);
         println!("ok {}", ok);

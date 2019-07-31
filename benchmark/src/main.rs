@@ -132,6 +132,18 @@ fn gjson_ex() {
 }
 "#;
 
+    let example = r#"{
+    "name": {"first": "Tom", "last": "Anderson"},
+    "age":37,
+    "children": ["Sara","Alex","Jack"],
+    "fav.movie": "Deer Hunter",
+    "friends": [
+        {"first": "Dale", "last": "Murphy", "age": 44, "nets": ["ig", "fb", "tw"]},
+        {"first": "Roger", "last": "Craig", "age": 68, "nets": ["fb", "tw"]},
+        {"first": "Jane", "last": "Murphy", "age": 47, "nets": ["ig", "tw"]}
+    ]
+}"#;
+
         // println!("=>{:?}<=", gjson::get(example, r#"friends.#(nets.#(=="ig"))"#));
         // println!("=>{:?}<=", gjson::get(example, r#"friends.#(nets."#));
         // println!("=>{:?}<=", gjson::get(example, r#"friends.#()#"#));
@@ -146,7 +158,9 @@ fn gjson_ex() {
         // println!("result {}", gjson::get(BENCH_DATA, "widget.text.onMouseUp"));
         // println!("result {}", gjson::get(BENCH_DATA, "widget.debug"));
         // println!("result {:?}", gjson::get(BENCH_DATA, "widget.menu.#(sub_item>=7)#.title").as_array());
-        println!("result {:?}", gjson::get(example, r#"loggy.programmers.#[tag="good"]#.firstName"#));
+        // println!("result {:?}", gjson::get(example, r#"loggy.programmers.#[tag="good"]#.firstName"#));
+        // println!("result {:?}", gjson::get(example, r#"friends.#(nets.#(=="fb"))#.first"#).as_array());
+        println!("result {:?}", gjson::get(example, r#"[name,a].#"#));
 }
 
 #[bench]
@@ -166,7 +180,7 @@ fn bench_json_rs(b: &mut Bencher) {
             .as_str()
             .unwrap();
 
-        let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
+        // let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
 
 
         let menu = &json::parse(BENCH_DATA).unwrap()["widget"]["menu"];
@@ -215,7 +229,7 @@ fn bench_gjson(b: &mut Bencher) {
         gjson::get(BENCH_DATA, "widget.image.hOffset").as_f64();
         gjson::get(BENCH_DATA, "widget.text.onMouseUp").as_str();
         gjson::get(BENCH_DATA, "widget.debug").as_str();
-        gjson::get(BENCH_DATA, "widget.text").as_map();
+        // gjson::get(BENCH_DATA, "widget.text").as_map();
         gjson::get(BENCH_DATA, "widget.menu.#(sub_item>7)#.title").as_array();
     })
 }

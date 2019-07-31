@@ -37,8 +37,9 @@ fn parser_query_value(v: &[u8]) -> (Value, usize) {
             b'0'...b'9' | b'-' => {
                 let (start, end) = reader.read_number_value();
                 let raw = reader.slice(start, end);
-                let f: f64 = str::from_utf8(raw).unwrap().parse().unwrap();
-                Value::Number(raw.to_vec(), f)
+                let s = String::from_utf8_lossy(raw).to_string();
+                let f: f64 = s.parse().unwrap();
+                Value::Number(s, f)
             }
             _ => Value::NotExist,
         };
@@ -115,12 +116,15 @@ fn parse_query_from_utf8<'a>(v: &'a [u8]) -> (Query<'a>, usize) {
     if v.len() == 0 {
         return (Query::empty(), 0);
     }
+
     // println!("parse query {:?}", String::from_utf8_lossy(v));
     let mut reader = reader::RefReader::new(v);
     let mut q = Query::empty();
     let mut depth = 1;
-    let mut op_start = 0;
+    let mut end = 0;
+
     let mut op_exsit = false;
+    let mut op_start = 0;
     let mut op_end = 0;
 
 
@@ -143,8 +147,14 @@ fn parse_query_from_utf8<'a>(v: &'a [u8]) -> (Query<'a>, usize) {
             b']' | b')' => {
                 depth -= 1;
                 if depth == 0 {
-                    if let Some(b'#') = reader.next() {
-                        q.set_all(true);
+                    match reader.next() {
+                        Some(b'#') => {
+                            q.set_all(true);
+                            end = reader.position();
+                            reader.next();
+                        }
+                        Some(_) => end = reader.position() - 1,
+                        None => end = reader.position(),
                     }
                     break;
                 }
@@ -171,8 +181,10 @@ fn parse_query_from_utf8<'a>(v: &'a [u8]) -> (Query<'a>, usize) {
     if op_exsit {
         q.set_path(util::trim_space_u8(&v[..op_start]));
         q.set_op(String::from_utf8_lossy(reader.slice(op_start, op_end)).to_string());
+    } else if end > 0 {
+        q.set_path(util::trim_space_u8(&v[..end + 1]));
     } else {
-        q.set_path(util::trim_space_u8(v));
+        q.set_path(util::trim_space_u8(&v[..]));
     }
 
 
@@ -183,18 +195,18 @@ pub fn new_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
     parse_path_from_utf8(v)
 }
 
-pub fn new_query_from_utf8<'a>(v: &'a [u8]) -> Query<'a> {
+fn new_query_from_utf8<'a>(v: &'a [u8]) -> Query<'a> {
     let (q, _) = parse_query_from_utf8(v);
     q
 }
 
 fn parse_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
     if v.len() == 0 {
-        return Path::new();
+        return Path::empty();
     }
     // println!("parse path {:?}", String::from_utf8_lossy(v));
     let mut reader = reader::RefReader::new(v);
-    let mut current_path = Path::new();
+    let mut current_path = Path::empty();
     let mut depth = 0;
 
     while let Some(b) = reader.peek() {
@@ -206,33 +218,36 @@ fn parse_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
                 if depth > 0 {
                     depth -= 0;
                 }
-                if depth == 0 {
-                    break;
-                }
             }
             b'.' => {
-                if depth == 0 {
+                if depth == 0 && reader.position() > 0 {
                     let end = reader.position() - 1;
                     current_path.set_part(reader.head(v, end));
+                    current_path.set_ok(true);
+                    current_path.set_more(true);
+                    reader.next();
+                    let next = parse_path_from_utf8(reader.tail(v));
+                    if next.ok {
+                        current_path.set_next(next);
+                    }
+                    return current_path;
                 }
-                current_path.set_ok(true);
-                current_path.set_more(true);
-                reader.next();
-
-                let next = parse_path_from_utf8(reader.tail(v));
-                if next.ok {
-                    current_path.set_next(next);
-                }
-                return current_path;
             }
             b'*' | b'?' => current_path.set_wild(true),
-            b'#' => current_path.set_arrch(true),
+            b'#' => {
+                if depth == 0 {
+                    current_path.set_arrch(true)
+                }
+            }
             b'[' | b'(' => {
                 depth += 1;
                 if depth == 1 && current_path.arrch {
                     reader.next();
                     let (query, offset) = parse_query_from_utf8(reader.tail(v));
                     current_path.set_q(query);
+                    reader.forward(offset-1);
+                    depth = 0;
+                    continue;
                 }
             }
             _ => (),
@@ -243,6 +258,7 @@ fn parse_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
     current_path.set_part(v);
     current_path.set_more(false);
     current_path.set_ok(true);
+    // println!("path => {:?}", current_path);
     current_path
 }
 

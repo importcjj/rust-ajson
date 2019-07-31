@@ -13,6 +13,8 @@ pub trait ByteReader {
         if self.position() >= offset {
             let prev = self.position();
             self.seek(prev - offset);
+        } else {
+            self.seek(0);
         }
     }
 
@@ -155,7 +157,7 @@ impl<'a> RefReader<'a> {
 impl<'a> ByteReader for RefReader<'a> {
     fn position(&self) -> usize {
         if !self.started() {
-            panic!("reader not started")
+            0
         } else {
             self.offset - 1
         }
