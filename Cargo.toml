@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "benchmark",
-    "gjson"
+    "gjson",
+    "pygjson"
 ]
