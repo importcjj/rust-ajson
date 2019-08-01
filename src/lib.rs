@@ -8,6 +8,7 @@ mod value;
 mod wild;
 mod reader;
 mod sub_selector;
+mod unescape;
 
 use std::io;
 pub use value::Value;

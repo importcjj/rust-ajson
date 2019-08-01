@@ -7,6 +7,7 @@ use std::str;
 use sub_selector;
 use sub_selector::SubSelector;
 use value::Value;
+use unescape;
 
 pub struct Getter<R>
 where
@@ -273,7 +274,8 @@ where
     fn parse_value_borrow(&self, v: &ParserValue) -> Value {
         match *v {
             ParserValue::String(start, end) => {
-                let s = String::from_utf8_lossy(self.bytes_slice(start + 1, end - 1)).to_string();
+                let s = unescape::unescape(self.bytes_slice(start + 1, end - 1));
+                // let s = String::from_utf8_lossy(self.bytes_slice(start + 1, end - 1)).to_string();
                 Value::String(s)
             }
             ParserValue::Object(start, end) => {

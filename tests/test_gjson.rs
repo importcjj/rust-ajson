@@ -1,5 +1,34 @@
 extern crate gjson;
-use gjson::{get, parse, Value};
+use std::env;
+use gjson::{get as gjson_get, parse, Value, Getter};
+extern crate json;
+
+#[test]
+fn test_json_rs_unicode() {
+    let data = r#"{"name": "Example emoji, KO: \ud83d\udd13, \ud83c\udfc3 OK: \u2764\ufe0f "}"#;
+    let a = &json::parse(data).unwrap();
+    println!("{}", a["name"].as_str().unwrap());
+    // println!("{}", )
+}
+
+fn get(json: &str, path: &str) -> Value {
+    match env::var("GETTER_FROM_READ") {
+        Ok(open) => {
+            if open.len() > 0 {
+                println!("get from read");
+                let mut g = Getter::new_from_read(json.as_bytes());
+                g.get(path)
+            } else {
+                println!("get from str");
+                gjson_get(json, path)
+            }
+        }
+        _ => {
+            println!("get from str");
+            gjson_get(json, path)
+        }
+    }
+}
 
 static BASIC_JSON: &'static str = r#"
 {"age":100, "name":{"here":"B\\\"R"},
@@ -158,7 +187,7 @@ fn test_basic_3() {
 
     let json = r#""\"he\nllo\"""#;
     let t = parse(json);
-    assert_eq!(t, r#"\"he\nllo\""#);
+    assert_eq!(t, "\"he\nllo\"");
 
     let t = parse(BASIC_JSON).get("loggy.programmers.#.firstName");
     assert_eq!(t.as_array().len(), 4);
@@ -177,7 +206,10 @@ fn test_basic_4() {
     assert_eq!(get(&BASIC_JSON, "vals.#"), 4 as f64);
     assert!(!get(&BASIC_JSON, "name.last").exists());
     // Need to Fix
-    // assert_eq!(get(&BASIC_JSON, "name.here"), r#"B\"R"#);
+    println!("len {}", get(&BASIC_JSON, "name.here").as_str().len());
+    println!("len {}", "B\\\"R".len());
+    assert_eq!(get(&BASIC_JSON, "name.here"), "B\\\"R");
+
     assert_eq!(get(&BASIC_JSON, "arr.#"), 6 as f64);
     assert_eq!(get(&BASIC_JSON, "arr.3.hello"), "world");
     // Need to Fix
@@ -294,8 +326,7 @@ fn test_emoji() {
     let r = parse(input);
     assert_eq!(
         r.get("utf8"),
-        // r#"Example emoji, KO: 🔓, 🏃 OK: ❤️ "#
-        r#"Example emoji, KO: \ud83d\udd13, \ud83c\udfc3 OK: \u2764\ufe0f "#
+        "Example emoji, KO: 🔓, 🏃 OK: ❤️ "
     );
 }
 
@@ -378,7 +409,7 @@ fn test_array() {
 fn test_issue_38() {
     assert_eq!(
         parse(r#"["S3O PEDRO DO BUTI\udf93"]"#).get("0"),
-        "S3O PEDRO DO BUTI\\udf93"
+        r#"S3O PEDRO DO BUTI\udf93"#
     );
     assert_eq!(
         parse(r#"["S3O PEDRO DO BUTI\udf93asdf"]"#).get("0"),
@@ -402,11 +433,11 @@ fn test_issue_38() {
     );
     assert_eq!(
         parse(r#"["S3O PEDRO DO BUTI\udf93\u1345"]"#).get("0"),
-        "S3O PEDRO DO BUTI\\udf93\\u1345"
+        "S3O PEDRO DO BUTI\\udf93ፅ"
     );
     assert_eq!(
         parse(r#"["S3O PEDRO DO BUTI\udf93\u1345asd"]"#).get("0"),
-        "S3O PEDRO DO BUTI\\udf93\\u1345asd"
+        "S3O PEDRO DO BUTI\\udf93ፅasd"
     );
 }
 

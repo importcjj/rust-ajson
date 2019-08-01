@@ -75,6 +75,8 @@ fn gjson_multi_query(json: &str) {
     ];
 }
 
+
+
 fn gjson_bench(json: &str) {
     gjson::get(json, "widget.window.name").as_str();
     gjson::get(json, "widget.image.hOffset").as_f64();
