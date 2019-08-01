@@ -288,10 +288,10 @@ where
             return None;
         }
 
-        if self.length == 0 {
+        if !self.started() {
             self.next()
         } else {
-            Some(self.buffer[self.offset])
+            Some(self.buffer[self.offset - 1])
         }
     }
 

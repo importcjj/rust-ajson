@@ -64,6 +64,17 @@ static BENCH_DATA: &'static str = r#"{
 //     }
 // }
 
+fn gjson_selector(json: &str) {
+    gjson::get(json, "widget.[image.src,text.data]").as_array();
+}
+
+fn gjson_multi_query(json: &str) {
+    [
+        gjson::get(json, "widget.image.src"),
+        gjson::get(json, "widget.text.data"),
+    ];
+}
+
 fn gjson_bench(json: &str) {
     gjson::get(json, "widget.window.name").as_str();
     gjson::get(json, "widget.image.hOffset").as_f64();
@@ -71,6 +82,7 @@ fn gjson_bench(json: &str) {
     gjson::get(json, "widget.debug").as_str();
     // gjson::get(json, "widget.text").as_map();
     gjson::get(json, "widget.menu.#(sub_item>7)#.title").as_array();
+    // gjson::get(json, "widget.menu.[1.title,2.options]").as_array();
 }
 
 fn json_rust_bench(data: &str) {
@@ -115,11 +127,15 @@ fn serde_json_bench(json: &str) {
         .collect();
 }
 
+
+
 fn criterion_benchmark(c: &mut Criterion) {
     // c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
     c.bench_function("gjson benchmark", |b| b.iter(|| gjson_bench(black_box(BENCH_DATA))));
     c.bench_function("serde_json benchmark", |b| b.iter(|| serde_json_bench(black_box(BENCH_DATA))));
     c.bench_function("json-rust benchmark", |b| b.iter(|| json_rust_bench(black_box(BENCH_DATA))));
+    c.bench_function("gjson selector", |b| b.iter(|| gjson_selector(black_box(BENCH_DATA))));
+    c.bench_function("gjson multi query", |b| b.iter(|| gjson_multi_query(black_box(BENCH_DATA))));
 }
 
 criterion_group!(benches, criterion_benchmark);

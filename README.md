@@ -16,7 +16,96 @@
 
 </div>
 
-## Usage
+#### Installation
+Add it to your `Cargo.toml` file:
+```
+[dependencies]
+gjson = "*"
+```
+Then import it to your code:
+```rust
+extern crate gjson;
+```
+
+#### Enjoy
+
+GJSON get json value with specified path, such as `project.name` or `project.version`. When the path matches, it returns immediately!
+
+```rust
+let data = r#"
+{
+  "project": {
+    "name": "gjson",
+    "maintainer": "importcjj",
+    "version": 0.1,
+    "rusts": ["stable", "nightly"]
+  }
+}
+"#;
+
+let name = gjson::get(data, "project.name");
+println!("{}", name.as_str()); // gjson
+```
+
+#### io::Read
+
+Not only string, GJSON also can parse JSON from io::Read.
+
+```rust
+use std::fs::File;
+
+let f = file::Open("path/to/json").unwrap();
+let json = gjson::parse_from_read(f);
+let value = json.get("a.b");
+println!("{}", value.as_str());
+```
+
+#### Value
+
+Value types.
+```rust
+enum Value {
+    String(String),
+    Number(String, f64),
+    Object(String),
+    Array(String),
+    Boolean(bool),
+    Null,
+    NotExist,
+}
+```
+
+Value methods.
+
+```rust
+value.as_str() -> &str
+value.as_u64() -> u64
+value.as_i64() -> i64
+value.as_f64() -> f64
+value.as_bool() -> bool
+value.as_array() -> Vec<Value>
+value.as_map() -> HashMap<String, Value>
+```
+
+Value check methods.
+```rust
+value.exsits() -> bool
+value.is_string() -> bool
+value.is_bool() -> bool
+value.is_object() -> bool
+value.is_array() -> bool
+value.is_null() -> bool
+```
+
+#### Validate
+
+GJSON can help you get the desired value from flawed JSON, but it's worth being more careful because of its looseness.
+
+`be careful!!!`
+
+Maybe I should provide a function to validate JSON 🤔
+
+#### Syntax
 
 JSON example
 
@@ -49,7 +138,7 @@ friends.#.first  >> ["Dale","Roger","Jane"]
 friends.1.last   >> "Craig"
 ```
 
-#### with query
+#### query
 
 ```
 friends.#(last=="Murphy").first   >> "Dale"
@@ -59,11 +148,22 @@ friends.#(first%"D*").last        >> "Murphy"
 friends.#(nets.#(=="fb"))#.first  >> ["Dale","Roger"]
 ```
 
-#### selectors
+#### selector
+Basically, you can use selectors to assemble whatever you want, and of course, the result is still a json ;)
+
 
 ```
 {name.first,age,"murphys":friends.#(last="Murphy")#.first}
 [name.first,age,children.0]
+```
+
+Sometimes, you can use selectors to improve the performance of multiple path queries.
+
+```rust
+gjson::get(json, "name.[first,last]").as_array();
+// It is better than
+gjson::get(json, "name.first"); 
+gjson::get(json, "name.last");
 ```
 
 

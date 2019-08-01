@@ -13,6 +13,7 @@ regex = "1"
 criterion = "0.2"
 json = "*"
 serde_json = "1.0"
+# pikkr = "0.16.0"
 
 [[bench]]
 name = "gjson_benchmark"

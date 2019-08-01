@@ -1,7 +1,9 @@
 use path_parser;
 use std::fmt;
-use util;
+use sub_selector::SubSelector;
 use value::Value;
+use util;
+
 use wild;
 
 static DEFAULT_NONE_QUERY: Query = Query {
@@ -22,6 +24,8 @@ static DEFAULT_NONE_PATH: Path = Path {
     arrch: false,
 
     query: None,
+    selectors: None,
+    arrsel: false,
 };
 
 pub struct Path<'a> {
@@ -29,10 +33,12 @@ pub struct Path<'a> {
     pub part: &'a [u8],
     pub next: Option<Box<Path<'a>>>,
     pub query: Option<Query<'a>>,
+
+    pub selectors: Option<Vec<SubSelector<'a>>>,
+    pub arrsel: bool,
     pub more: bool,
     pub wild: bool,
     pub arrch: bool,
-    // pub query: Query<'a>,
 }
 
 impl<'a> fmt::Debug for Path<'a> {
@@ -51,6 +57,11 @@ impl<'a> fmt::Debug for Path<'a> {
         if self.next.is_some() {
             write!(f, " next=`{:?}`", self.next.as_ref().unwrap())?;
         }
+        if self.selectors.is_some() {
+            for sel in self.borrow_selectors() {
+                write!(f, "\n\tselector {:?}", sel)?;
+            }
+        }
         if self.has_query() {
             write!(f, " query={:?}", self.query)?;
         }
@@ -68,15 +79,25 @@ impl<'a> Path<'a> {
             wild: false,
             arrch: false,
             query: None,
+            selectors: None,
+            arrsel: false,
         }
     }
 
-    // pub fn new_from_utf8(v: &'a [u8]) -> Path<'a> {
-    //     path_parser::new_path(v)
-    // }
 
     pub fn new_from_utf8(v: &'a [u8]) -> Path<'a> {
         path_parser::new_path_from_utf8(v)
+    }
+
+    pub fn is_match(&self, key: &[u8]) -> bool {
+        let eq = if self.wild {
+            wild::is_match_u8(key, self.part)
+        } else {
+            util::equal_escape_u8(key, self.part)
+        };
+
+        // println!("match key {:?} == {:?} ? {}", self.part, key, eq);
+        eq
     }
 
     pub fn set_part(&mut self, v: &'a [u8]) {
@@ -125,16 +146,26 @@ impl<'a> Path<'a> {
         }
     }
 
-    pub fn is_match(&self, key: &[u8]) -> bool {
-        let eq = if self.wild {
-            wild::is_match_u8(key, self.part)
-        } else {
-            util::equal_escape_u8(key, self.part)
-        };
-
-        // println!("match key {:?} == {:?} ? {}", self.part, key, eq);
-        eq
+    pub fn set_selectors(&mut self, selectors: Vec<SubSelector<'a>>) {
+        self.selectors = Some(selectors);
     }
+
+    pub fn set_arrsel(&mut self, b: bool) {
+        self.arrsel = b;
+    }
+
+    pub fn has_selectors(&self) -> bool {
+        self.selectors.is_some()
+    }
+
+    pub fn borrow_selectors(&self) -> &[SubSelector] {
+        match self.selectors {
+            Some(_) => self.selectors.as_ref().unwrap(),
+            None => &[],
+        }
+    }
+
+
 }
 
 pub struct Query<'a> {
@@ -189,9 +220,7 @@ impl<'a> Query<'a> {
 
     pub fn get_path(&self) -> Path {
         match self.has_path() {
-            true => {
-                path_parser::new_path_from_utf8(self.path)
-            },
+            true => path_parser::new_path_from_utf8(self.path),
             false => Path::empty(),
         }
     }
@@ -268,17 +297,15 @@ impl<'a> Query<'a> {
             },
 
             Value::Number(_, f1) => match target {
-                Value::Number(_, f2) => {
-                    match op.as_str() {
-                        "=" => f1 == f2,
-                        "==" => f1 == f2,
-                        "!=" => f1 != f2,
-                        "<" => f1 < f2,
-                        "<=" => f1 <= f2,
-                        ">" => f1 > f2,
-                        ">=" => f1 >= f2,
-                        _ => false,
-                    }
+                Value::Number(_, f2) => match op.as_str() {
+                    "=" => f1 == f2,
+                    "==" => f1 == f2,
+                    "!=" => f1 != f2,
+                    "<" => f1 < f2,
+                    "<=" => f1 <= f2,
+                    ">" => f1 > f2,
+                    ">=" => f1 >= f2,
+                    _ => false,
                 },
                 _ => false,
             },

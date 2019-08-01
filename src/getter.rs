@@ -5,6 +5,7 @@ use std::io;
 
 use std::str;
 use sub_selector;
+use sub_selector::SubSelector;
 use value::Value;
 
 pub struct Getter<R>
@@ -19,12 +20,16 @@ enum ParserValue {
     String(usize, usize),
     Object(usize, usize),
     Array(usize, usize),
-    Vector(String),
     Null,
     Boolean(bool),
     Number(usize, usize),
     NumberUsize(usize),
     NotExist,
+
+    ArrayString(String),
+    ObjectString(String),
+    StringString(String),
+    NumberString(String),
 }
 
 impl ParserValue {
@@ -33,7 +38,7 @@ impl ParserValue {
     }
 
     pub fn is_vector(&self) -> bool {
-        if let ParserValue::Vector(_) = *self {
+        if let ParserValue::ArrayString(_) = *self {
             true
         } else {
             false
@@ -41,7 +46,7 @@ impl ParserValue {
     }
 
     pub fn vector_to_value(self) -> Value {
-        if let ParserValue::Vector(s) = self {
+        if let ParserValue::ArrayString(s) = self {
             Value::Array(s)
         } else {
             Value::NotExist
@@ -82,12 +87,8 @@ where
     }
 
     pub fn get_by_utf8(&mut self, v: &[u8]) -> Value {
-        if v.len() > 0 {
-            match v[0] {
-                b'[' => return self.get_array_by_sub_selectors(&v),
-                b'{' => return self.get_object_by_sub_selectors(&v),
-                _ => (),
-            }
+        if v.len() == 0 {
+            return Value::NotExist;
         }
 
         // reset offset
@@ -97,7 +98,7 @@ where
         if pv.is_vector() {
             pv.vector_to_value()
         } else {
-            self.parse_value(&pv)
+            self.parse_value(pv)
         }
     }
 
@@ -110,7 +111,7 @@ where
                 b'{' => {
                     self.next_byte();
                     loop {
-                        let v = self.read_next_value();
+                        let v = self.read_next_parse_value();
                         if v.exists() {
                             count += 1;
                             if count % 2 == 1 {
@@ -126,7 +127,7 @@ where
                                 };
 
                             } else {
-                                m.insert(key_cache.take().unwrap(), self.parse_value(&v));
+                                m.insert(key_cache.take().unwrap(), self.parse_value(v));
                             }
                             continue;
                         }
@@ -149,9 +150,9 @@ where
                 b'[' => {
                     self.next_byte();
                     loop {
-                        let v = self.read_next_value();
+                        let v = self.read_next_parse_value();
                         if v.exists() {
-                            arr.push(self.parse_value(&v));
+                            arr.push(self.parse_value(v));
                             continue;
                         }
                         break 'outer;
@@ -194,6 +195,7 @@ where
     }
 
 
+    #[allow(dead_code)]
     fn value_to_raw_str<'b>(&'b mut self, v: &'b ParserValue) -> &'b str {
         match *v {
             ParserValue::String(start, end)
@@ -202,7 +204,7 @@ where
             | ParserValue::Number(start, end) => {
                 str::from_utf8(self.bytes_slice(start, end)).unwrap()
             }
-            ParserValue::Vector(ref s) => s,
+            ParserValue::ArrayString(ref s) => s,
             ParserValue::Boolean(true) => "true",
             ParserValue::Boolean(false) => "false",
             // ParserValue::NumberUsize(u) => &u.to_string(),
@@ -211,7 +213,27 @@ where
         }
     }
 
-    fn write_vaue_to_buffer<'b>(&'b mut self, buffer: &mut String, v: &'b ParserValue) {
+    fn write_to_bytes_buffer(&self, v: &mut Vec<u8>, pv: &ParserValue) {
+        match *pv {
+            ParserValue::String(start, end)
+            | ParserValue::Object(start, end)
+            | ParserValue::Array(start, end)
+            | ParserValue::Number(start, end) => v.extend(self.bytes_slice(start, end)),
+
+            ParserValue::ArrayString(ref s)
+            | ParserValue::ObjectString(ref s)
+            | ParserValue::StringString(ref s)
+            | ParserValue::NumberString(ref s) => v.extend(s.as_bytes()),
+
+            ParserValue::Boolean(true) => v.extend("true".as_bytes()),
+            ParserValue::Boolean(false) => v.extend("false".as_bytes()),
+            ParserValue::NumberUsize(ref u) => v.extend(u.to_string().as_bytes()),
+            ParserValue::Null => v.extend("null".as_bytes()),
+            _ => (),
+        };
+    }
+
+    fn write_to_string_buffer<'b>(&'b mut self, buffer: &mut String, v: &'b ParserValue) {
         match *v {
             ParserValue::String(start, end)
             | ParserValue::Object(start, end)
@@ -220,18 +242,35 @@ where
                 let s = str::from_utf8(self.bytes_slice(start, end)).unwrap();
                 buffer.push_str(s)
             }
-            ParserValue::Vector(ref s) => buffer.push_str(s),
+
+            ParserValue::ArrayString(ref s)
+            | ParserValue::ObjectString(ref s)
+            | ParserValue::StringString(ref s)
+            | ParserValue::NumberString(ref s) => buffer.push_str(s),
+
             ParserValue::Boolean(true) => buffer.push_str("true"),
             ParserValue::Boolean(false) => buffer.push_str("false"),
             ParserValue::NumberUsize(ref u) => buffer.push_str(&u.to_string()),
             ParserValue::Null => buffer.push_str("null"),
             _ => buffer.push_str(""),
         };
+    }
 
+    fn parse_value(&self, v: ParserValue) -> Value {
+        match v {
+            ParserValue::ArrayString(s) => Value::Array(s),
+            ParserValue::ObjectString(s) => Value::Object(s),
+            ParserValue::StringString(s) => Value::String(s),
+            ParserValue::NumberString(s) => {
+                let f: f64 = s.parse().unwrap();
+                Value::Number(s, f)
+            }
+            _ => self.parse_value_borrow(&v),
+        }
     }
 
 
-    fn parse_value(&mut self, v: &ParserValue) -> Value {
+    fn parse_value_borrow(&self, v: &ParserValue) -> Value {
         match *v {
             ParserValue::String(start, end) => {
                 let s = String::from_utf8_lossy(self.bytes_slice(start + 1, end - 1)).to_string();
@@ -245,92 +284,101 @@ where
                 let s = String::from_utf8_lossy(self.bytes_slice(start, end)).to_string();
                 Value::Array(s)
             }
-            // ParserValue::Vector(ref string) => Value::Array(string.clone(), None),
+
+            ParserValue::ArrayString(_)
+            | ParserValue::ObjectString(_)
+            | ParserValue::StringString(_)
+            | ParserValue::NumberString(_) => panic!("should not borrow string value"),
+
             ParserValue::Number(start, end) => {
                 let raw = self.bytes_slice(start, end);
                 let s = String::from_utf8_lossy(raw).to_string();
                 let f: f64 = s.parse().unwrap();
                 Value::Number(s, f)
             }
-            ParserValue::NumberUsize(u) => {
-                Value::Number(u.to_string(), u as f64)
-            }
+            ParserValue::NumberUsize(u) => Value::Number(u.to_string(), u as f64),
             ParserValue::Boolean(bool) => Value::Boolean(bool),
             ParserValue::Null => Value::Null,
             _ => Value::NotExist,
         }
     }
 
-    fn get_object_by_sub_selectors(&mut self, v: &[u8]) -> Value {
-        let (sels, offset, ok) = sub_selector::parse_selectors_from_utf8(v);
-        if !ok {
-            return Value::NotExist;
-        }
+    fn select_to_object(&mut self, sels: &[SubSelector]) -> ParserValue {
+        let mut raw = Vec::with_capacity(100);
+        let start = self.position();
+        raw.push(b'{');
 
-        let mut raw = String::with_capacity(100);
-        raw.push('{');
+
         for sel in sels {
             let path = Path::new_from_utf8(sel.path);
-            self.seek(0);
+            self.seek(start);
             let sub_pv = self.get_by_path(&path);
             if sub_pv.exists() {
-                raw.push('"');
-                raw.push_str(str::from_utf8(sel.name).unwrap());
-                raw.push('"');
-                raw.push(':');
-                self.write_vaue_to_buffer(&mut raw, &sub_pv);
-                raw.push(',');
+                raw.push(b'"');
+                raw.extend(sel.name);
+                raw.push(b'"');
+                raw.push(b':');
+                self.write_to_bytes_buffer(&mut raw, &sub_pv);
+                raw.push(b',');
             }
         }
 
         if raw.len() > 1 {
             raw.pop();
         }
-        raw.push('}');
+        raw.push(b'}');
 
-        let arr = Value::Object(raw);
-        if v.len() > offset + 1 {
-            arr.get_by_utf8(&v[offset+1..])
-        } else {
-            arr
-        }
+
+        let s = String::from_utf8_lossy(&raw).to_string();
+        ParserValue::ObjectString(s)
+
     }
 
-    fn get_array_by_sub_selectors(&mut self, v: &[u8]) -> Value {
-        let (sels, offset, ok) = sub_selector::parse_selectors_from_utf8(v);
-        if !ok {
-            return Value::NotExist;
-        }
 
-        let mut raw = String::with_capacity(100);
-        raw.push('[');
+    fn select_to_array(&mut self, sels: &[SubSelector]) -> ParserValue {
+
+        let mut raw = Vec::with_capacity(100);
+        let start = self.position();
+        raw.push(b'[');
+
+
         for sel in sels {
             let path = Path::new_from_utf8(sel.path);
-            self.seek(0);
+            self.seek(start);
             let sub_pv = self.get_by_path(&path);
             if sub_pv.exists() {
-                self.write_vaue_to_buffer(&mut raw, &sub_pv);
-                raw.push(',');
+                self.write_to_bytes_buffer(&mut raw, &sub_pv);
+                raw.push(b',');
             }
         }
 
         if raw.len() > 1 {
             raw.pop();
         }
-        raw.push(']');
+        raw.push(b']');
 
-        let arr = Value::Array(raw);
-        if v.len() > offset + 1 {
-            arr.get_by_utf8(&v[offset+1..])
-        } else {
-            arr
-        }
 
+        let s = String::from_utf8_lossy(&raw).to_string();
+        ParserValue::ArrayString(s)
     }
+
 
     fn get_by_path(&mut self, path: &Path) -> ParserValue {
         if !path.ok {
             return ParserValue::NotExist;
+        }
+
+        if path.has_selectors() {
+            let v = match path.arrsel {
+                true => self.select_to_array(path.borrow_selectors()),
+                false => self.select_to_object(path.borrow_selectors()),
+            };
+
+            return if path.more {
+                self.get_from_value(&v, path.borrow_next())
+            } else {
+                v
+            }
         }
 
         while let Some(b) = self.peek() {
@@ -366,11 +414,20 @@ where
                 self.seek(old);
                 v
             }
+            ParserValue::ArrayString(ref s) | ParserValue::ObjectString(ref s) => {
+                let mut getter = Getter::from_str(s);
+                getter.get_by_path(path)
+            }
             _ => ParserValue::NotExist,
         }
     }
 
-    fn read_next_value(&mut self) -> ParserValue {
+    pub fn next_value(&mut self) -> Value {
+        let pv = self.read_next_parse_value();
+        self.parse_value(pv)
+    }
+
+    fn read_next_parse_value(&mut self) -> ParserValue {
         while let Some(b) = self.peek() {
             let v = match b {
                 b'"' => self.read_str_value(),
@@ -385,7 +442,7 @@ where
                 }
             };
 
-            // println!("read value {:?}", self.parse_value(&v));
+            // println!("read value {:?}", self.parse_value(v));
             return v;
         }
 
@@ -449,7 +506,7 @@ where
 
         let mut count = 0;
         loop {
-            let v = self.read_next_value();
+            let v = self.read_next_parse_value();
             if v == ParserValue::NotExist {
                 return v;
             }
@@ -465,7 +522,7 @@ where
                     return if path.more {
                         self.get_by_path(path.borrow_next())
                     } else {
-                        self.read_next_value()
+                        self.read_next_parse_value()
                     };
                 }
             } else {
@@ -503,10 +560,10 @@ where
                 if path.more {
                     return self.get_by_path(path.borrow_next());
                 }
-                return self.read_next_value();
+                return self.read_next_parse_value();
             }
 
-            let mut v = self.read_next_value();
+            let mut v = self.read_next_parse_value();
             if !v.exists() {
                 break;
             }
@@ -518,9 +575,9 @@ where
                 let value_to_match = match query.has_path() {
                     true => {
                         let v = self.get_from_value(&v, &query_key);
-                        self.parse_value(&v)
+                        self.parse_value_borrow(&v)
                     }
-                    false => self.parse_value(&v),
+                    false => self.parse_value_borrow(&v),
                 };
 
                 if !query.is_match(&value_to_match) {
@@ -542,7 +599,7 @@ where
             }
 
             if return_vector {
-                self.write_vaue_to_buffer(&mut vector_str, &v);
+                self.write_to_string_buffer(&mut vector_str, &v);
                 vector_str.push(',');
             }
         }
@@ -553,26 +610,17 @@ where
                 vector_str.pop();
             }
             vector_str.push(']');
-            ParserValue::Vector(vector_str)
+            ParserValue::ArrayString(vector_str)
         } else if return_first {
             ParserValue::NotExist
-        } else if idx_get {
-            ParserValue::NotExist
-        } else {
+        } else if path.arrch {
             ParserValue::NumberUsize(count)
+        } else {
+            ParserValue::NotExist
         }
     }
 }
 
-pub fn get(json: &str, path: &str) -> Value {
-    Getter::new_from_utf8(json.as_bytes()).get(path)
-}
-
-pub fn parse(json: &str) -> Value {
-    let mut getter = Getter::new_from_utf8(json.as_bytes());
-    let v = getter.read_next_value();
-    getter.parse_value(&v)
-}
 
 #[cfg(test)]
 mod tests {
@@ -632,10 +680,10 @@ mod tests {
         println!("result {:?}", g.get("widget.text.onMouseUp"));
         println!("result {:?}", g.get("widget.debug"));
 
-        println!("result {:?}", get(json, "widget.window.name"));
-        println!("result {:?}", get(json, "widget.image.hOffset"));
-        println!("result {:?}", get(json, "widget.text.onMouseUp"));
-        println!("result {:?}", get(json, "widget.debug"));
+        println!("result {:?}", g.get("widget.window.name"));
+        println!("result {:?}", g.get("widget.image.hOffset"));
+        println!("result {:?}", g.get("widget.text.onMouseUp"));
+        println!("result {:?}", g.get("widget.debug"));
 
         println!("result {:?}", g.get("widget.menu.0"));
         println!("result {:?}", g.get("widget.menu.#(sub_item>=7)#.title"));

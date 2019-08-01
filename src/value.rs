@@ -1,9 +1,9 @@
 use getter::Getter;
 use std::cmp;
 use std::collections::HashMap;
-use std::str;
-use std::fmt;
 
+use std::fmt;
+use std::str;
 
 #[derive(PartialEq, Clone)]
 pub enum Value {
@@ -21,7 +21,7 @@ impl fmt::Debug for Value {
         match self {
             Value::NotExist => write!(f, "<NOT EXSIT>"),
             Value::String(_) => write!(f, r#""{}""#, self.as_str()),
-            _ => write!(f, "{}", self.as_str())
+            _ => write!(f, "{}", self.as_str()),
         }
     }
 }
@@ -46,9 +46,20 @@ impl Value {
 }
 
 impl Value {
+    pub fn exists(&self) -> bool {
+        *self != Value::NotExist
+    }
+
     pub fn is_string(&self) -> bool {
         match self {
             Value::String(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_number(&self) -> bool {
+        match self {
+            Value::Number(_, _) => true,
             _ => false,
         }
     }
@@ -67,6 +78,13 @@ impl Value {
         }
     }
 
+    pub fn is_bool(&self) -> bool {
+        match self {
+            Value::Boolean(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn is_null(&self) -> bool {
         match self {
             Value::Null => true,
@@ -76,9 +94,6 @@ impl Value {
 }
 
 impl Value {
-    pub fn exists(&self) -> bool {
-        *self != Value::NotExist
-    }
 
     pub fn as_str(&self) -> &str {
         match &self {
