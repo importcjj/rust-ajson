@@ -1,5 +1,5 @@
 <div align="center">
-  <img width="240" height="78" border="0" alt="GJSON" src="logo.png">
+  <img width="147" height="46" border="0" alt="GJSON" src="logo.png">
 
   <p>Get JSON values quickly - JSON Parser for Rust</p>
 
