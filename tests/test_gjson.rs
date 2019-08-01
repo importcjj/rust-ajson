@@ -1,14 +1,59 @@
+extern crate json;
 extern crate gjson;
+extern crate serde_json;
+
 use std::env;
 use gjson::{get as gjson_get, parse, Value, Getter};
-extern crate json;
+
 
 #[test]
 fn test_json_rs_unicode() {
-    let data = r#"{"name": "Example emoji, KO: \ud83d\udd13, \ud83c\udfc3 OK: \u2764\ufe0f "}"#;
-    let a = &json::parse(data).unwrap();
-    println!("{}", a["name"].as_str().unwrap());
-    // println!("{}", )
+
+    use serde_json::Value;
+
+
+    let data = r#"{"IdentityData":{"GameInstanceId":634866135153775564}}"#;
+    // let a = &json::parse(data).unwrap();
+    let a = &serde_json::from_str::<Value>(data).unwrap();
+    println!("{}", a["IdentityData"]["GameInstanceId"].as_u64().unwrap());
+    println!("{}", a["IdentityData"]["GameInstanceId"].as_i64().unwrap());
+    println!("{}", a["IdentityData"]["GameInstanceId"].as_f64().unwrap());
+
+
+
+    let data = r#"
+    {
+		"min_uint64": 0,
+		"max_uint64": 18446744073709551615,
+		"overflow_uint64": 18446744073709551616,
+		"min_int64": -9223372036854775808,
+		"max_int64": 9223372036854775807,
+		"overflow_int64": 9223372036854775808,
+		"min_uint53":  0,
+		"max_uint53":  4503599627370495,
+		"overflow_uint53": 4503599627370496,
+		"min_int53": -2251799813685248,
+		"max_int53": 2251799813685247,
+		"overflow_int53": 2251799813685248
+	}
+    "#;
+
+    // let b = &json::parse(data).unwrap();
+    let b = &serde_json::from_str::<Value>(data).unwrap();
+    assert_eq!(b["min_uint53"].as_u64().unwrap(), 0);
+    assert_eq!(b["max_uint53"].as_u64().unwrap(), 4503599627370495);
+    assert_eq!(b["overflow_uint53"].as_i64().unwrap(), 4503599627370496);
+    assert_eq!(b["min_int53"].as_i64().unwrap(), -2251799813685248);
+    assert_eq!(b["max_int53"].as_i64().unwrap(), 2251799813685247);
+    assert_eq!(b["overflow_int53"].as_i64().unwrap(), 2251799813685248);
+    assert_eq!(b["min_uint64"].as_u64().unwrap(), 0);
+    assert_eq!(b["max_uint64"].as_u64().unwrap(), 18446744073709551615);
+    
+    assert_eq!(b["overflow_uint64"].as_i64().unwrap(), 0);
+    assert_eq!(b["min_int64"].as_i64().unwrap(), -9223372036854775808);
+    assert_eq!(b["max_int64"].as_i64().unwrap(), 9223372036854775807);
+    
+    assert_eq!(b["overflow_int64"].as_i64().unwrap(), -9223372036854775808);
 }
 
 fn get(json: &str, path: &str) -> Value {
