@@ -48,18 +48,7 @@ let name = gjson::get(data, "project.name");
 println!("{}", name.as_str()); // gjson
 ```
 
-## io::Read
 
-Not only string, GJSON also can parse JSON from io::Read.
-
-```rust
-use std::fs::File;
-
-let f = file::Open("path/to/json").unwrap();
-let json = gjson::parse_from_read(f);
-let value = json.get("a.b");
-println!("{}", value.as_str());
-```
 
 ## Value
 
@@ -111,13 +100,9 @@ if v.exsits() {
 }
 ```
 
-## Validate
+## get or parse?
 
-GJSON can help you get the desired value from flawed JSON, but it's worth being more careful because of its looseness.
-
-`be careful!!!`
-
-Maybe I should provide a function to validate JSON 🤔
+`Parse` needs to read a complete json element, but `get` returns the result immediately, so `get` is recommended if you want to simply get a value
 
 ## Syntax
 
@@ -199,6 +184,26 @@ gjson::get(json, "name.first");
 gjson::get(json, "name.last");
 ```
 
+## io::Read
+
+Not only string, GJSON also can parse JSON from io::Read.
+
+```rust
+use std::fs::File;
+
+let f = file::Open("path/to/json").unwrap();
+let json = gjson::parse_from_read(f);
+let value = json.get("a.b");
+println!("{}", value.as_str());
+```
+
+## Validate
+
+GJSON can help you get the desired value from flawed JSON, but it's worth being more careful because of its looseness.
+
+`be careful!!!`
+
+Maybe I should provide a function to validate JSON 🤔
 
 ## Performance
 
