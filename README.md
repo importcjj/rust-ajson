@@ -15,6 +15,8 @@
 
 </div>
 
+Inspiration comes from [gjson](https://github.com/tidwall/gjson) in golang
+
 ## Installation
 Add it to your `Cargo.toml` file:
 ```
@@ -74,7 +76,7 @@ enum Value {
 }
 ```
 
-Value methods.
+Value has a number of methods that meet your different needs.
 
 ```rust
 value.as_str() -> &str
@@ -84,16 +86,29 @@ value.as_f64() -> f64
 value.as_bool() -> bool
 value.as_array() -> Vec<Value>
 value.as_map() -> HashMap<String, Value>
+
+value.get(&str) -> Value
 ```
 
-Value check methods.
+
 ```rust
 value.exsits() -> bool
+value.is_number() -> bool
 value.is_string() -> bool
 value.is_bool() -> bool
 value.is_object() -> bool
 value.is_array() -> bool
 value.is_null() -> bool
+```
+
+Sometimes you need to check if value exists, you can use `exsits()`. Notice that when used for `null` values, exsits returns `true`.
+
+```rust
+
+let v = gjson::get(json, "path");
+if v.exsits() {
+  println!("got it {}", value);
+}
 ```
 
 ## Validate
@@ -123,6 +138,9 @@ JSON example
 ```
 
 #### basic
+Below is a quick overview of the path syntax, for more complete information please check out GJSON Syntax.
+
+A path is a series of keys separated by a dot. A key may contain special wildcard characters '*' and '?'. To access an array value use the index as the key. To get the number of elements in an array or to access a child path, use the '#' character. The dot and wildcard characters can be escaped with '\'.
 
 ```
 name.last        >> "Anderson"
@@ -137,7 +155,23 @@ friends.#.first  >> ["Dale","Roger","Jane"]
 friends.1.last   >> "Craig"
 ```
 
-#### query
+#### Escape character
+Special purpose characters, such as ., *, and ? can be escaped with \.
+
+```
+fav\.movie             "Deer Hunter"
+```
+
+#### Arrays
+The # character allows for digging into JSON Arrays.To get the length of an array you'll just use the # all by itself.
+
+```
+friends.#              3
+friends.#.age         [44,68,47]
+```
+
+#### queries
+You can also query an array for the first match by using #(...), or find all matches with #(...)#. Queries support the ==, !=, <, <=, >, >= comparison operators and the simple pattern matching % (like) and !% (not like) operators.
 
 ```
 friends.#(last=="Murphy").first   >> "Dale"
@@ -147,7 +181,7 @@ friends.#(first%"D*").last        >> "Murphy"
 friends.#(nets.#(=="fb"))#.first  >> ["Dale","Roger"]
 ```
 
-#### selector
+#### construct
 Basically, you can use selectors to assemble whatever you want, and of course, the result is still a json ;)
 
 
@@ -168,7 +202,11 @@ gjson::get(json, "name.last");
 
 ## Performance
 
-Benchmarks => [gjson](https://github.com/importcjj/gjson), [serde_json](https://github.com/serde-rs/json), [rust-json](https://github.com/maciejhirsz/json-rust)
+`$ cargo bench`
+
+* [gjson](https://github.com/importcjj/gjson)
+* [serde_json](https://github.com/serde-rs/json)
+* [rust-json](https://github.com/maciejhirsz/json-rust)
 
 ```
 gjson benchmark         time:   [6.7000 us 6.8023 us 6.9081 us]                             
@@ -191,3 +229,7 @@ Found 5 outliers among 100 measurements (5.00%)
   4 (4.00%) high mild
   1 (1.00%) high severe
 ```
+
+* MacBook Pro (13-inch, 2018, Four Thunderbolt 3 Ports)
+* 2.7 GHz Intel Core i7
+* 16 GB 2133 MHz LPDDR3
