@@ -10,13 +10,12 @@
   <a href="https://importcjj.github.io/rust-gjson-playground/">
   <img src="https://img.shields.io/badge/goto-playground-orange">
 
-  <hr>
 </a>
 
 
 </div>
 
-#### Installation
+## Installation
 Add it to your `Cargo.toml` file:
 ```
 [dependencies]
@@ -27,7 +26,7 @@ Then import it to your code:
 extern crate gjson;
 ```
 
-#### Enjoy
+## Enjoy
 
 GJSON get json value with specified path, such as `project.name` or `project.version`. When the path matches, it returns immediately!
 
@@ -47,7 +46,7 @@ let name = gjson::get(data, "project.name");
 println!("{}", name.as_str()); // gjson
 ```
 
-#### io::Read
+## io::Read
 
 Not only string, GJSON also can parse JSON from io::Read.
 
@@ -60,7 +59,7 @@ let value = json.get("a.b");
 println!("{}", value.as_str());
 ```
 
-#### Value
+## Value
 
 Value types.
 ```rust
@@ -97,7 +96,7 @@ value.is_array() -> bool
 value.is_null() -> bool
 ```
 
-#### Validate
+## Validate
 
 GJSON can help you get the desired value from flawed JSON, but it's worth being more careful because of its looseness.
 
@@ -105,7 +104,7 @@ GJSON can help you get the desired value from flawed JSON, but it's worth being 
 
 Maybe I should provide a function to validate JSON 🤔
 
-#### Syntax
+## Syntax
 
 JSON example
 
