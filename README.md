@@ -1,21 +1,21 @@
-
-<h1 align="center">
-  <span>G</span>JSON
-</h1>
-
 <div align="center">
-<p>Get JSON values quickly - JSON Parser for Rust</p>
+  <img width="240" height="78" border="0" alt="GJSON" src="logo.png">
 
-<a href="https://github.com/importcjj/gjson">
-<img src="https://travis-ci.com/importcjj/gjson2.svg?token=ZZrg3rRkUA8NUGrjEsU9&branch=master"></a>
+  <p>Get JSON values quickly - JSON Parser for Rust</p>
+
+  <a href="https://github.com/importcjj/gjson">
+  <img src="https://travis-ci.com/importcjj/gjson2.svg?token=ZZrg3rRkUA8NUGrjEsU9&branch=master"></a>
 
 
-<a href="https://importcjj.github.io/rust-gjson-playground/">
-<img src="https://img.shields.io/badge/goto-playground-orange">
+  <a href="https://importcjj.github.io/rust-gjson-playground/">
+  <img src="https://img.shields.io/badge/goto-playground-orange">
+
+  <hr>
 </a>
 
 
 </div>
+
 ## Usage
 
 JSON example
