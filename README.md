@@ -1,6 +1,6 @@
 <div align="center">
-  <!-- <img alt="RJSON" src="logo.png"> -->
-  <h1>R-JSON</h1>
+  <!-- <img alt="AJSON" src="logo.png"> -->
+  <h1>A-JSON</h1>
   <p>Read JSON values quickly - Rust JSON Parser</p>
 
   <a href="https://github.com/importcjj/ajson">
@@ -31,7 +31,7 @@ extern crate ajson;
 
 ## Enjoy
 
-RJSON get json value with specified path, such as `project.name` or `project.version`. When the path matches, it returns immediately!
+AJSON get json value with specified path, such as `project.name` or `project.version`. When the path matches, it returns immediately!
 
 ```rust
 let data = r#"
@@ -183,7 +183,7 @@ ajson::get(json, "name.last");
 
 ## io::Read
 
-Not only string, RJSON also can parse JSON from io::Read.
+Not only string, AJSON also can parse JSON from io::Read.
 
 ```rust
 use std::fs::File;
@@ -196,7 +196,7 @@ println!("{}", value.as_str());
 
 ## Validate
 
-RJSON can help you get the desired value from flawed JSON, but it's worth being more careful because of its looseness.
+AJSON can help you get the desired value from flawed JSON, but it's worth being more careful because of its looseness.
 
 `be careful!!!`
 
@@ -238,7 +238,7 @@ Found 5 outliers among 100 measurements (5.00%)
 
 ## problems
 
-RJSON has just been finished, there may be some bugs and shortcomings, please feel free to issue. Also, Rust is a new language for me, and maybe ajson isn't rust enough, so I hope you have some suggestions.
+AJSON has just been finished, there may be some bugs and shortcomings, please feel free to issue. Also, Rust is a new language for me, and maybe ajson isn't rust enough, so I hope you have some suggestions.
 
 ## License
  MIT License.
