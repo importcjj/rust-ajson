@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::io;
 
 use std::str;
-use sub_selector;
+use number::Number;
 use sub_selector::SubSelector;
 use value::Value;
 use unescape;
@@ -29,8 +29,6 @@ enum ParserValue {
 
     ArrayString(String),
     ObjectString(String),
-    StringString(String),
-    NumberString(String),
 }
 
 impl ParserValue {
@@ -222,9 +220,7 @@ where
             | ParserValue::Number(start, end) => v.extend(self.bytes_slice(start, end)),
 
             ParserValue::ArrayString(ref s)
-            | ParserValue::ObjectString(ref s)
-            | ParserValue::StringString(ref s)
-            | ParserValue::NumberString(ref s) => v.extend(s.as_bytes()),
+            | ParserValue::ObjectString(ref s) => v.extend(s.as_bytes()),
 
             ParserValue::Boolean(true) => v.extend("true".as_bytes()),
             ParserValue::Boolean(false) => v.extend("false".as_bytes()),
@@ -245,9 +241,7 @@ where
             }
 
             ParserValue::ArrayString(ref s)
-            | ParserValue::ObjectString(ref s)
-            | ParserValue::StringString(ref s)
-            | ParserValue::NumberString(ref s) => buffer.push_str(s),
+            | ParserValue::ObjectString(ref s) => buffer.push_str(s),
 
             ParserValue::Boolean(true) => buffer.push_str("true"),
             ParserValue::Boolean(false) => buffer.push_str("false"),
@@ -261,11 +255,6 @@ where
         match v {
             ParserValue::ArrayString(s) => Value::Array(s),
             ParserValue::ObjectString(s) => Value::Object(s),
-            ParserValue::StringString(s) => Value::String(s),
-            ParserValue::NumberString(s) => {
-                let f: f64 = s.parse().unwrap();
-                Value::Number(s, f)
-            }
             _ => self.parse_value_borrow(&v),
         }
     }
@@ -288,17 +277,16 @@ where
             }
 
             ParserValue::ArrayString(_)
-            | ParserValue::ObjectString(_)
-            | ParserValue::StringString(_)
-            | ParserValue::NumberString(_) => panic!("should not borrow string value"),
+            | ParserValue::ObjectString(_) => panic!("should not borrow string value"),
 
             ParserValue::Number(start, end) => {
+                
                 let raw = self.bytes_slice(start, end);
-                let s = String::from_utf8_lossy(raw).to_string();
-                let f: f64 = s.parse().unwrap();
-                Value::Number(s, f)
+                let n = Number::from(raw);
+
+                Value::Number(n)
             }
-            ParserValue::NumberUsize(u) => Value::Number(u.to_string(), u as f64),
+            ParserValue::NumberUsize(u) => Value::Number(Number::U64(u.to_string())),
             ParserValue::Boolean(bool) => Value::Boolean(bool),
             ParserValue::Null => Value::Null,
             _ => Value::NotExist,

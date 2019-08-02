@@ -9,10 +9,12 @@ mod wild;
 mod reader;
 mod sub_selector;
 mod unescape;
+mod number;
 
 use std::io;
 pub use value::Value;
 pub use getter::Getter;
+
 
 
 pub fn get(json: &str, path: &str) -> Value {

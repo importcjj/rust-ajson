@@ -6,55 +6,59 @@ use std::env;
 use gjson::{get as gjson_get, parse, Value, Getter};
 
 
-#[test]
-fn test_json_rs_unicode() {
+// #[test]
+// fn test_json_rs_unicode() {
 
-    use serde_json::Value;
-
-
-    let data = r#"{"IdentityData":{"GameInstanceId":634866135153775564}}"#;
-    // let a = &json::parse(data).unwrap();
-    let a = &serde_json::from_str::<Value>(data).unwrap();
-    println!("{}", a["IdentityData"]["GameInstanceId"].as_u64().unwrap());
-    println!("{}", a["IdentityData"]["GameInstanceId"].as_i64().unwrap());
-    println!("{}", a["IdentityData"]["GameInstanceId"].as_f64().unwrap());
+//     use serde_json::Value;
 
 
+//     let data = r#"{"IdentityData":{"GameInstanceId":634866135153775564}}"#;
+//     // let a = &json::parse(data).unwrap();
+//     let a = &serde_json::from_str::<Value>(data).unwrap();
+//     println!("{}", a["IdentityData"]["GameInstanceId"].as_u64().unwrap());
+//     println!("{}", a["IdentityData"]["GameInstanceId"].as_i64().unwrap());
+//     println!("{}", a["IdentityData"]["GameInstanceId"].as_f64().unwrap());
 
-    let data = r#"
-    {
-		"min_uint64": 0,
-		"max_uint64": 18446744073709551615,
-		"overflow_uint64": 18446744073709551616,
-		"min_int64": -9223372036854775808,
-		"max_int64": 9223372036854775807,
-		"overflow_int64": 9223372036854775808,
-		"min_uint53":  0,
-		"max_uint53":  4503599627370495,
-		"overflow_uint53": 4503599627370496,
-		"min_int53": -2251799813685248,
-		"max_int53": 2251799813685247,
-		"overflow_int53": 2251799813685248
-	}
-    "#;
+//     let data = r#"{"IdentityData":{"GameInstanceId":634866135153775564.88172}}"#;
+//     let a = &serde_json::from_str::<Value>(data).unwrap();
+//     // println!("{}", a["IdentityData"]["GameInstanceId"].as_u64().unwrap());
+//     // println!("{}", a["IdentityData"]["GameInstanceId"].as_i64().unwrap());
+//     println!("{}", a["IdentityData"]["GameInstanceId"].as_f64().unwrap());
 
-    // let b = &json::parse(data).unwrap();
-    let b = &serde_json::from_str::<Value>(data).unwrap();
-    assert_eq!(b["min_uint53"].as_u64().unwrap(), 0);
-    assert_eq!(b["max_uint53"].as_u64().unwrap(), 4503599627370495);
-    assert_eq!(b["overflow_uint53"].as_i64().unwrap(), 4503599627370496);
-    assert_eq!(b["min_int53"].as_i64().unwrap(), -2251799813685248);
-    assert_eq!(b["max_int53"].as_i64().unwrap(), 2251799813685247);
-    assert_eq!(b["overflow_int53"].as_i64().unwrap(), 2251799813685248);
-    assert_eq!(b["min_uint64"].as_u64().unwrap(), 0);
-    assert_eq!(b["max_uint64"].as_u64().unwrap(), 18446744073709551615);
+//     let data = r#"
+//     {
+// 		"min_uint64": 0,
+// 		"max_uint64": 18446744073709551615,
+// 		"overflow_uint64": 18446744073709551616,
+// 		"min_int64": -9223372036854775808,
+// 		"max_int64": 9223372036854775807,
+// 		"overflow_int64": 9223372036854775808,
+// 		"min_uint53":  0,
+// 		"max_uint53":  4503599627370495,
+// 		"overflow_uint53": 4503599627370496,
+// 		"min_int53": -2251799813685248,
+// 		"max_int53": 2251799813685247,
+// 		"overflow_int53": 2251799813685248
+// 	}
+//     "#;
+
+//     // let b = &json::parse(data).unwrap();
+//     let b = &serde_json::from_str::<Value>(data).unwrap();
+//     assert_eq!(b["min_uint53"].as_u64().unwrap(), 0);
+//     assert_eq!(b["max_uint53"].as_u64().unwrap(), 4503599627370495);
+//     assert_eq!(b["overflow_uint53"].as_i64().unwrap(), 4503599627370496);
+//     assert_eq!(b["min_int53"].as_i64().unwrap(), -2251799813685248);
+//     assert_eq!(b["max_int53"].as_i64().unwrap(), 2251799813685247);
+//     assert_eq!(b["overflow_int53"].as_i64().unwrap(), 2251799813685248);
+//     assert_eq!(b["min_uint64"].as_u64().unwrap(), 0);
+//     assert_eq!(b["max_uint64"].as_u64().unwrap(), 18446744073709551615);
     
-    assert_eq!(b["overflow_uint64"].as_i64().unwrap(), 0);
-    assert_eq!(b["min_int64"].as_i64().unwrap(), -9223372036854775808);
-    assert_eq!(b["max_int64"].as_i64().unwrap(), 9223372036854775807);
+//     assert_eq!(b["overflow_uint64"].as_i64().unwrap(), 0);
+//     assert_eq!(b["min_int64"].as_i64().unwrap(), -9223372036854775808);
+//     assert_eq!(b["max_int64"].as_i64().unwrap(), 9223372036854775807);
     
-    assert_eq!(b["overflow_int64"].as_i64().unwrap(), -9223372036854775808);
-}
+//     assert_eq!(b["overflow_int64"].as_i64().unwrap(), -9223372036854775808);
+// }
 
 fn get(json: &str, path: &str) -> Value {
     match env::var("GETTER_FROM_READ") {
@@ -304,18 +308,16 @@ fn test_is_array_is_object() {
 fn test_plus_53_bit_ints() {
     let json = r#"{"IdentityData":{"GameInstanceId":634866135153775564}}"#;
     let v = get(&json, "IdentityData.GameInstanceId");
-    // assert_eq!(v.as_u64(), 634866135153775564);
-    // assert_eq!(v.as_i64(), 634866135153775564);
-    // Todo
-    // assert_eq!(v.to_f64(), 634866135153775616.0);
+    assert_eq!(v.as_u64(), 634866135153775564);
+    assert_eq!(v.as_i64(), 634866135153775564);
+    assert_eq!(v.as_f64(), 634866135153775616.0);
 
 
     let json = r#"{"IdentityData":{"GameInstanceId":634866135153775564.88172}}"#;
-    let _v = get(&json, "IdentityData.GameInstanceId");
-    // assert_eq!(v.as_u64() as u64, 634866135153775616);
-    // assert_eq!(v.as_i64(), 634866135153775616);
-    // Todo
-    // assert_eq!(v.to_f64(), 634866135153775616.88172);
+    let v = get(&json, "IdentityData.GameInstanceId");
+    assert_eq!(v.as_u64(), 634866135153775564);
+    assert_eq!(v.as_i64(), 634866135153775564);
+    assert_eq!(v.as_f64(), 634866135153775616.88172);
 
     let json = r#"
     {
@@ -335,19 +337,19 @@ fn test_plus_53_bit_ints() {
     "#;
 
     assert_eq!(get(json, "min_uint53").as_u64(), 0);
-    // assert_eq!(get(&json, "max_uint53").to_u64(), 4503599627370495);
-    // assert_eq!(get(&json, "overflow_uint53").to_i64(), 4503599627370496);
-    // assert_eq!(get(&json, "min_int53").to_i64(), -2251799813685248);
-    // assert_eq!(get(&json, "max_int53").to_i64(), 2251799813685247);
-    // assert_eq!(get(&json, "overflow_int53").to_i64(), 2251799813685248);
-    // assert_eq!(get(&json, "min_uint64").to_u64(), 0);
-    // assert_eq!(get(&json, "max_uint64").to_u64(), 18446744073709551615);
+    assert_eq!(get(&json, "max_uint53").as_u64(), 4503599627370495);
+    assert_eq!(get(&json, "overflow_uint53").as_i64(), 4503599627370496);
+    assert_eq!(get(&json, "min_int53").as_i64(), -2251799813685248);
+    assert_eq!(get(&json, "max_int53").as_i64(), 2251799813685247);
+    assert_eq!(get(&json, "overflow_int53").as_i64(), 2251799813685248);
+    assert_eq!(get(&json, "min_uint64").as_u64(), 0);
+    assert_eq!(get(&json, "max_uint64").as_u64(), 18446744073709551615);
     
-    // assert_eq!(get(&json, "overflow_uint64").to_i64(), 0);
-    // assert_eq!(get(&json, "min_int64").to_i64(), -9223372036854775808);
-    // assert_eq!(get(&json, "max_int64").to_i64(), 9223372036854775807);
+    assert_eq!(get(&json, "overflow_uint64").as_i64(), 0);
+    assert_eq!(get(&json, "min_int64").as_i64(), -9223372036854775808);
+    assert_eq!(get(&json, "max_int64").as_i64(), 9223372036854775807);
     
-    // assert_eq!(get(&json, "overflow_int64").to_i64(), -9223372036854775808);
+    assert_eq!(get(&json, "overflow_int64").as_i64(), 0);
 }
 
 #[test]
@@ -397,7 +399,8 @@ fn test_map() {
 
 #[test]
 fn test_array() {
-    let json = r#"{
+    let json = r#"
+    {
         "widget": {
             "debug": "on",
             "window": {

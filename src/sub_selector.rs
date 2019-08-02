@@ -27,12 +27,29 @@ impl<'a> fmt::Debug for SubSelector<'a> {
 
 
 fn last_of_name(v: &[u8]) -> &[u8] {
-    for mut i in (0..v.len()).rev() {
+    // for mut i in (0..v.len()).rev() {
+    //     match v[i] {
+    //         b'\\' => i -= 1,
+    //         b'.' => return &v[i + 1..],
+    //         _ => (),
+    //     }
+    // }
+
+    if v.len() == 0 {
+        return v
+    }
+
+    let mut i = v.len() - 1;
+    loop {
         match v[i] {
             b'\\' => i -= 1,
             b'.' => return &v[i + 1..],
             _ => (),
         }
+        if i == 0 {
+            break
+        }
+        i -= 1;
     }
 
     return v;
@@ -58,9 +75,6 @@ pub fn parse_selectors_from_utf8<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usiz
                 sels.push(sel);
             }
 
-
-            colon = 0;
-            start = reader.offset();
         }};
     };
 
@@ -81,6 +95,8 @@ pub fn parse_selectors_from_utf8<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usiz
             b',' => {
                 if depth == 1 {
                     push_sel!();
+                    colon = 0;
+                    start = reader.offset();
                 }
             }
             b'[' | b'(' | b'{' => {

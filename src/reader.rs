@@ -80,7 +80,7 @@ pub trait ByteReader {
 
     fn read_str_value(&mut self) -> (usize, usize) {
         let start = self.position();
-        let mut end = start;
+
         let mut ok = false;
         while let Some(b) = self.next() {
             match b {
@@ -94,7 +94,7 @@ pub trait ByteReader {
                 _ => (),
             }
         }
-        end = self.position();
+        let mut end = self.position();
         if !ok {
             end += 1;
         }

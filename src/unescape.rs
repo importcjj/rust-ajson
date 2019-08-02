@@ -1,4 +1,4 @@
-use std::char;
+
 use std::u32;
 
 pub fn unescape(v: &[u8]) -> String {
@@ -37,6 +37,10 @@ pub fn unescape(v: &[u8]) -> String {
                         i += 5;
 
                         let mut is_surrogate_pair = true;
+                        // UTF-16 surrogate pairs
+                        // Surrogates are characters in the Unicode range U+D800—U+DFFF (2,048 code points): it is also the Unicode category “surrogate” (Cs). The range is composed of two parts:
+                        // U+D800—U+DBFF (1,024 code points): high surrogates
+                        // U+DC00—U+DFFF (1,024 code points): low surrogates
                         match codepoint {
                             0x0000 ... 0xD7FF => (),
                             0xD800 ... 0xDBFF => {
@@ -87,14 +91,6 @@ pub fn unescape(v: &[u8]) -> String {
     String::from_utf8_lossy(&s).to_string()
 }
 
-// UTF-16 surrogate pairs
-// Surrogates are characters in the Unicode range U+D800—U+DFFF (2,048 code points): it is also the Unicode category “surrogate” (Cs). The range is composed of two parts:
-// U+D800—U+DBFF (1,024 code points): high surrogates
-// U+DC00—U+DFFF (1,024 code points): low surrogates
-fn is_surrogate_pair(x: u32) -> bool {
-    x <= 0xD7FF
-}
-
 fn u8s_to_u32(v: &[u8]) -> u32 {
     u8_to_u32(v[0]) << 12 |
     u8_to_u32(v[1]) << 8 |
@@ -136,12 +132,6 @@ fn write_codepoint<'a>(codepoint: u32, buffer: &mut Vec<u8>) -> bool {
         true
 }
 
-fn decode_surrogate_pair(u1: u32, u2: u32) -> Option<char> {
-    let mut code = 0x10000;
-    code += (u1 & 0x03FF) << 10;
-    code += u2 & 0x03FF;
-    char::from_u32(code)
-}
 
 #[cfg(test)]
 mod tests {

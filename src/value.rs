@@ -1,14 +1,14 @@
 use getter::Getter;
-use std::cmp;
+use number::Number;
 use std::collections::HashMap;
-
+use std::cmp;
 use std::fmt;
 use std::str;
 
 #[derive(PartialEq, Clone)]
 pub enum Value {
     String(String),
-    Number(String, f64),
+    Number(Number),
     Object(String),
     Array(String),
     Boolean(bool),
@@ -59,7 +59,7 @@ impl Value {
 
     pub fn is_number(&self) -> bool {
         match self {
-            Value::Number(_, _) => true,
+            Value::Number(_) => true,
             _ => false,
         }
     }
@@ -98,7 +98,7 @@ impl Value {
     pub fn as_str(&self) -> &str {
         match &self {
             Value::String(ref s) => s,
-            Value::Number(ref s, _) => s,
+            Value::Number(number) => number.as_str(),
             Value::Boolean(true) => "true",
             Value::Boolean(false) => "false",
             Value::Object(ref s) => s,
@@ -109,19 +109,30 @@ impl Value {
     }
 
     pub fn as_f64(&self) -> f64 {
-        match *self {
-            Value::Number(_, f) => f,
+        match self {
+            Value::Number(number) => number.as_f64(),
             Value::Boolean(true) => 1.0,
+            Value::String(s) => Number::from(s.as_bytes()).as_f64(),
             _ => 0.0,
         }
     }
 
     pub fn as_u64(&self) -> u64 {
-        self.as_f64() as u64
+        match self {
+            Value::Number(number) => number.as_u64(),
+            Value::Boolean(true) => 1,
+            Value::String(s) => Number::from(s.as_bytes()).as_u64(),
+            _ => 0,
+        }
     }
 
     pub fn as_i64(&self) -> i64 {
-        self.as_f64() as i64
+        match self {
+            Value::Number(number) => number.as_i64(),
+            Value::Boolean(true) => 1,
+            Value::String(ref s) => Number::from(s.as_bytes()).as_i64(),
+            _ => 0,
+        }
     }
 
     pub fn as_bool(&self) -> bool {

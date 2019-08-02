@@ -1,9 +1,9 @@
 use path_parser;
 use std::fmt;
 use sub_selector::SubSelector;
-use value::Value;
-use util;
 
+use util;
+use value::Value;
 use wild;
 
 static DEFAULT_NONE_QUERY: Query = Query {
@@ -96,7 +96,6 @@ impl<'a> Path<'a> {
             util::equal_escape_u8(key, self.part)
         };
 
-        // println!("match key {:?} == {:?} ? {}", self.part, key, eq);
         eq
     }
 
@@ -165,7 +164,21 @@ impl<'a> Path<'a> {
         }
     }
 
+}
 
+#[derive(Debug, PartialEq)]
+pub enum QueryValue {
+    String(String),
+    F64(f64),
+    Boolean(bool),
+    Null,
+    NotExsit,
+}
+
+impl QueryValue {
+    pub fn exists(&self) -> bool {
+        *self != QueryValue::NotExsit
+    }
 }
 
 pub struct Query<'a> {
@@ -173,7 +186,7 @@ pub struct Query<'a> {
     pub path: &'a [u8],
     pub key: Option<Box<Path<'a>>>,
     pub op: Option<String>,
-    pub value: Option<Value>,
+    pub value: Option<QueryValue>,
     pub all: bool,
 }
 
@@ -202,6 +215,7 @@ impl<'a> fmt::Debug for Query<'a> {
     }
 }
 
+
 impl<'a> Query<'a> {
     pub fn empty() -> Query<'a> {
         Query {
@@ -225,10 +239,12 @@ impl<'a> Query<'a> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn has_key(&self) -> bool {
         self.key.is_some()
     }
 
+    #[allow(dead_code)]
     pub fn get_key(&self) -> &Path {
         match self.key {
             Some(_) => self.key.as_ref().unwrap(),
@@ -244,7 +260,7 @@ impl<'a> Query<'a> {
         self.op = Some(op);
     }
 
-    pub fn set_val(&mut self, val: Value) {
+    pub fn set_val(&mut self, val: QueryValue) {
         self.value = Some(val);
     }
 
@@ -252,6 +268,7 @@ impl<'a> Query<'a> {
         self.all = all;
     }
 
+    #[allow(dead_code)]
     pub fn set_key(&mut self, key: Path<'a>) {
         if key.ok {
             self.key = Some(Box::new(key));
@@ -279,52 +296,48 @@ impl<'a> Query<'a> {
 
         let target = self.value.as_ref().unwrap();
 
-        match &v {
-            Value::String(s1) => match target {
-                Value::String(s2) => match op.as_str() {
-                    "==" => s1 == s2,
-                    "=" => s1 == s2,
-                    "!=" => s1 != s2,
-                    ">" => s1 > s2,
-                    ">=" => s1 >= s2,
-                    "<" => s1 < s2,
-                    "<=" => s1 <= s2,
-                    "%" => wild::is_match(s1, s2),
-                    "!%" => !wild::is_match(s1, s2),
+        match target {
+            QueryValue::String(q) => match v {
+                Value::String(s) => match op.as_str() {
+                    "==" => s == q,
+                    "=" => s == q,
+                    "!=" => s != q,
+                    ">" => s > q,
+                    ">=" => s >= q,
+                    "<" => s < q,
+                    "<=" => s <= q,
+                    "%" => wild::is_match(s, q),
+                    "!%" => !wild::is_match(s, q),
                     _ => false,
                 },
                 _ => false,
             },
 
-            Value::Number(_, f1) => match target {
-                Value::Number(_, f2) => match op.as_str() {
-                    "=" => f1 == f2,
-                    "==" => f1 == f2,
-                    "!=" => f1 != f2,
-                    "<" => f1 < f2,
-                    "<=" => f1 <= f2,
-                    ">" => f1 > f2,
-                    ">=" => f1 >= f2,
+            QueryValue::F64(q) => match v {
+                Value::Number(n) => match op.as_str() {
+                    "=" => n.as_f64() == *q,
+                    "==" => n.as_f64() == *q,
+                    "!=" => n.as_f64() != *q,
+                    "<" => n.as_f64() < *q,
+                    "<=" => n.as_f64() <= *q,
+                    ">" => n.as_f64() > *q,
+                    ">=" => n.as_f64() >= *q,
                     _ => false,
                 },
                 _ => false,
             },
 
-            Value::Boolean(b1) => match target {
-                Value::Boolean(b2) => match op.as_str() {
-                    "=" => b1 == b2,
-                    "==" => b1 == b2,
-                    "!=" => b1 != b2,
-                    "<" => b1 < b2,
-                    "<=" => b1 <= b2,
-                    ">" => b1 > b2,
-                    ">=" => b1 >= b2,
+            QueryValue::Boolean(q) => match v {
+                Value::Boolean(b) => match op.as_str() {
+                    "=" => b == q,
+                    "==" => b == q,
+                    "!=" => b != q,
                     _ => false,
                 },
                 _ => false,
             },
 
-            Value::Null => match op.as_str() {
+            QueryValue::Null => match op.as_str() {
                 "=" => *v == Value::Null,
                 "==" => *v == Value::Null,
                 "!=" => *v != Value::Null,
