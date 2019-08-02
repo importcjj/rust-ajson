@@ -22,7 +22,7 @@ Inspiration comes from [gjson](https://github.com/tidwall/gjson) in golang
 Add it to your `Cargo.toml` file:
 ```
 [dependencies]
-gjson = "*"
+gjson = "0.1"
 ```
 Then add it to your code:
 ```rust
