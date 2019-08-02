@@ -177,7 +177,6 @@ Basically, you can use selectors to assemble whatever you want, and of course, t
 
 ```rust
 gjson::get(json, "name.[first,last]").as_array();
-// It is better than
 gjson::get(json, "name.first"); 
 gjson::get(json, "name.last");
 ```
