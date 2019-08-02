@@ -31,6 +31,13 @@ Then add it to your code:
 extern crate ajson;
 ```
 
+## Todo
+
+* Add documentation
+* Follow api-guidelines
+* Update benchmark
+* Optimize
+
 ## Enjoy
 
 AJSON get json value with specified path, such as `project.name` or `project.version`. When the path matches, it returns immediately!
@@ -51,62 +58,7 @@ let name = ajson::get(data, "project.name");
 println!("{}", name.as_str()); // ajson
 ```
 
-
-
-## Value
-
-Value types.
-```rust
-enum Value {
-    String(String),
-    Number(Number),
-    Object(String),
-    Array(String),
-    Boolean(bool),
-    Null,
-    NotExist,
-}
-```
-
-Value has a number of methods that meet your different needs.
-
-```rust
-value.as_str() -> &str
-value.as_u64() -> u64
-value.as_i64() -> i64
-value.as_f64() -> f64
-value.as_bool() -> bool
-value.as_array() -> Vec<Value>
-value.as_map() -> HashMap<String, Value>
-value.get(&str) -> Value
-```
-
-
-```rust
-value.exists() -> bool
-value.is_number() -> bool
-value.is_string() -> bool
-value.is_bool() -> bool
-value.is_object() -> bool
-value.is_array() -> bool
-value.is_null() -> bool
-```
-
-Sometimes you need to check if value exists, you can use `exists()`. Notice that when used for `null` values, exists returns `true`.
-
-```rust
-
-let v = ajson::get(json, "path");
-if v.exist() {
-  println!("got it {}", value);
-}
-```
-
-## get or parse?
-
-`Parse` needs to read a complete json element, but `get` returns the result immediately, so `get` is recommended if you want to simply get a value
-
-## Syntax
+## Path Syntax
 
 JSON example
 
@@ -182,6 +134,59 @@ ajson::get(json, "name.[first,last]").as_array();
 ajson::get(json, "name.first"); 
 ajson::get(json, "name.last");
 ```
+
+## Value
+
+Value types.
+```rust
+enum Value {
+    String(String),
+    Number(Number),
+    Object(String),
+    Array(String),
+    Boolean(bool),
+    Null,
+    NotExist,
+}
+```
+
+Value has a number of methods that meet your different needs.
+
+```rust
+value.as_str() -> &str
+value.as_u64() -> u64
+value.as_i64() -> i64
+value.as_f64() -> f64
+value.as_bool() -> bool
+value.as_array() -> Vec<Value>
+value.as_map() -> HashMap<String, Value>
+value.get(&str) -> Value
+```
+
+
+```rust
+value.exists() -> bool
+value.is_number() -> bool
+value.is_string() -> bool
+value.is_bool() -> bool
+value.is_object() -> bool
+value.is_array() -> bool
+value.is_null() -> bool
+```
+
+Sometimes you need to check if value exists, you can use `exists()`. Notice that when used for `null` values, exists returns `true`.
+
+```rust
+
+let v = ajson::get(json, "path");
+if v.exist() {
+  println!("got it {}", value);
+}
+```
+
+## get or parse?
+
+`Parse` needs to read a complete json element, but `get` returns the result immediately, so `get` is recommended if you want to simply get a value
 
 ## io::Read
 
