@@ -19,7 +19,7 @@ pub enum Value {
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::NotExist => write!(f, "<NOT EXSIT>"),
+            Value::NotExist => write!(f, "<NOT Exist>"),
             Value::String(_) => write!(f, r#""{}""#, self.as_str()),
             _ => write!(f, "{}", self.as_str()),
         }

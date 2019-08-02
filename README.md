@@ -1,14 +1,14 @@
 <div align="center">
-  <img alt="GJSON" src="logo.png">
+  <!-- <img alt="RJSON" src="logo.png"> -->
+  <h1>R-JSON</h1>
+  <p>Read JSON values quickly - Rust JSON Parser</p>
 
-  <p>Get JSON values quickly - JSON Parser for Rust</p>
-
-  <a href="https://github.com/importcjj/gjson">
-  <img src="https://travis-ci.com/importcjj/gjson.svg?branch=master"></a>
+  <a href="https://github.com/importcjj/rjson">
+  <img src="https://travis-ci.com/importcjj/rjson.svg?branch=master"></a>
 
   <img src="https://img.shields.io/badge/crates.io-0.1.2-blue">
 
-  <a href="https://importcjj.github.io/rust-gjson-playground/">
+  <a href="https://importcjj.github.io/rust-rjson-playground/">
   <img src="https://img.shields.io/badge/goto-playground-orange">
 
 </a>
@@ -22,22 +22,22 @@ Inspiration comes from [gjson](https://github.com/tidwall/gjson) in golang
 Add it to your `Cargo.toml` file:
 ```
 [dependencies]
-gjson = "0.1"
+rjson = "0.1"
 ```
 Then add it to your code:
 ```rust
-extern crate gjson;
+extern crate rjson;
 ```
 
 ## Enjoy
 
-GJSON get json value with specified path, such as `project.name` or `project.version`. When the path matches, it returns immediately!
+RJSON get json value with specified path, such as `project.name` or `project.version`. When the path matches, it returns immediately!
 
 ```rust
 let data = r#"
 {
   "project": {
-    "name": "gjson",
+    "name": "rjson",
     "maintainer": "importcjj",
     "version": 0.1,
     "rusts": ["stable", "nightly"]
@@ -45,8 +45,8 @@ let data = r#"
 }
 "#;
 
-let name = gjson::get(data, "project.name");
-println!("{}", name.as_str()); // gjson
+let name = rjson::get(data, "project.name");
+println!("{}", name.as_str()); // rjson
 ```
 
 
@@ -81,7 +81,7 @@ value.get(&str) -> Value
 
 
 ```rust
-value.exsits() -> bool
+value.exists() -> bool
 value.is_number() -> bool
 value.is_string() -> bool
 value.is_bool() -> bool
@@ -90,12 +90,12 @@ value.is_array() -> bool
 value.is_null() -> bool
 ```
 
-Sometimes you need to check if value exists, you can use `exsits()`. Notice that when used for `null` values, exsits returns `true`.
+Sometimes you need to check if value exists, you can use `exists()`. Notice that when used for `null` values, exists returns `true`.
 
 ```rust
 
-let v = gjson::get(json, "path");
-if v.exsits() {
+let v = rjson::get(json, "path");
+if v.exist() {
   println!("got it {}", value);
 }
 ```
@@ -176,27 +176,27 @@ Basically, you can use selectors to assemble whatever you want, and of course, t
 ```
 
 ```rust
-gjson::get(json, "name.[first,last]").as_array();
-gjson::get(json, "name.first"); 
-gjson::get(json, "name.last");
+rjson::get(json, "name.[first,last]").as_array();
+rjson::get(json, "name.first"); 
+rjson::get(json, "name.last");
 ```
 
 ## io::Read
 
-Not only string, GJSON also can parse JSON from io::Read.
+Not only string, RJSON also can parse JSON from io::Read.
 
 ```rust
 use std::fs::File;
 
 let f = file::Open("path/to/json").unwrap();
-let json = gjson::parse_from_read(f);
+let json = rjson::parse_from_read(f);
 let value = json.get("a.b");
 println!("{}", value.as_str());
 ```
 
 ## Validate
 
-GJSON can help you get the desired value from flawed JSON, but it's worth being more careful because of its looseness.
+RJSON can help you get the desired value from flawed JSON, but it's worth being more careful because of its looseness.
 
 `be careful!!!`
 
@@ -206,12 +206,12 @@ Maybe need a validate function 🤔
 
 `$ cargo bench`
 
-* [gjson](https://github.com/importcjj/gjson)
+* [rjson](https://github.com/importcjj/rjson)
 * [serde_json](https://github.com/serde-rs/json)
 * [rust-json](https://github.com/maciejhirsz/json-rust)
 
 ```
-gjson benchmark         time:   [6.7000 us 6.8023 us 6.9081 us]                             
+rjson benchmark         time:   [6.7000 us 6.8023 us 6.9081 us]                             
                         change: [-1.8368% -0.4152% +1.0466%] (p = 0.58 > 0.05)
                         No change in performance detected.
 Found 3 outliers among 100 measurements (3.00%)
@@ -238,7 +238,7 @@ Found 5 outliers among 100 measurements (5.00%)
 
 ## problems
 
-GJSON has just been finished, there may be some bugs and shortcomings, please feel free to issue. Also, Rust is a new language for me, and maybe gjson isn't rust enough, so I hope you have some suggestions.
+RJSON has just been finished, there may be some bugs and shortcomings, please feel free to issue. Also, Rust is a new language for me, and maybe rjson isn't rust enough, so I hope you have some suggestions.
 
 ## License
  MIT License.

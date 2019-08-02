@@ -170,12 +170,12 @@ pub enum QueryValue {
     F64(f64),
     Boolean(bool),
     Null,
-    NotExsit,
+    NotExist,
 }
 
 impl QueryValue {
     pub fn exists(&self) -> bool {
-        *self != QueryValue::NotExsit
+        *self != QueryValue::NotExist
     }
 }
 

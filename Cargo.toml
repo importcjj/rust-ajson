@@ -1,10 +1,10 @@
 [package]
-name = "gjson"
+name = "rjson"
 version = "0.1.2"
 authors = ["importcjj <importcjj@gmail.com>"]
 license = "MIT"
 description = "JSON Parser for Rust - Get JSON values quickly"
-keywords = ["json", "json-parser", "gjson"]
+keywords = ["json", "json-parser", "gjson", "rjson"]
 categories = ["encoding"]
 readme = "README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-MIT"]
@@ -19,5 +19,5 @@ json = "0.11.13"
 serde_json = "1.0"
 
 [[bench]]
-name = "gjson_benchmark"
+name = "rjson_benchmark"
 harness = false

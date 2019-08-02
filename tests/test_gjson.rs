@@ -1,8 +1,8 @@
-extern crate gjson;
+extern crate rjson;
 extern crate json;
 extern crate serde_json;
 
-use gjson::{get as gjson_get, parse, Getter, Value};
+use rjson::{get as rjson_get, parse, Getter, Value};
 use std::env;
 
 // #[test]
@@ -67,12 +67,12 @@ fn get(json: &str, path: &str) -> Value {
                 g.get(path)
             } else {
                 println!("get from str");
-                gjson_get(json, path)
+                rjson_get(json, path)
             }
         }
         _ => {
             println!("get from str");
-            gjson_get(json, path)
+            rjson_get(json, path)
         }
     }
 }
@@ -183,7 +183,7 @@ fn test_query_example() {
 
 #[test]
 fn test_basic() {
-    let r = gjson::parse(BASIC_JSON);
+    let r = rjson::parse(BASIC_JSON);
     println!("{}", r.get(r#"loggy.programmers.#[tag="good"].firstName"#));
     assert_eq!(
         "Brett",
@@ -199,7 +199,7 @@ fn test_basic() {
 
 #[test]
 fn test_basic_2() {
-    let r = gjson::parse(BASIC_JSON);
+    let r = rjson::parse(BASIC_JSON);
     let mut mtok = r.get(r#"loggy.programmers.#[age==101].firstName"#);
     assert_eq!(mtok, "1002.3");
     mtok = r.get(r#"loggy.programmers.#[firstName != "Brett"].firstName"#);
@@ -225,7 +225,7 @@ fn test_basic_2() {
 
 #[test]
 fn test_basic_3() {
-    let t = gjson::parse(BASIC_JSON)
+    let t = rjson::parse(BASIC_JSON)
         .get("loggy.programmers")
         .get("1")
         .get("firstName");
