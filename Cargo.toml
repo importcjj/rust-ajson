@@ -2,7 +2,8 @@
 name = "gjson"
 version = "0.1.0"
 authors = ["importcjj <importcjj@gmail.com>"]
-
+description = "JSON Parser for Rust - Get JSON values quickly"
+license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
