@@ -6,7 +6,7 @@
   <a href="https://github.com/importcjj/gjson">
   <img src="https://travis-ci.com/importcjj/gjson.svg?branch=master"></a>
 
-  <img src="https://img.shields.io/badge/crates.io-0.1.0-blue">
+  <img src="https://img.shields.io/badge/crates.io-0.1.1-blue">
 
   <a href="https://importcjj.github.io/rust-gjson-playground/">
   <img src="https://img.shields.io/badge/goto-playground-orange">
