@@ -56,7 +56,7 @@ Value types.
 ```rust
 enum Value {
     String(String),
-    Number(String, f64),
+    Number(Number),
     Object(String),
     Array(String),
     Boolean(bool),
@@ -200,7 +200,7 @@ GJSON can help you get the desired value from flawed JSON, but it's worth being 
 
 `be careful!!!`
 
-Maybe I should provide a function to validate JSON 🤔
+Maybe need a validate function 🤔
 
 ## Performance
 
@@ -235,3 +235,10 @@ Found 5 outliers among 100 measurements (5.00%)
 * MacBook Pro (13-inch, 2018, Four Thunderbolt 3 Ports)
 * 2.7 GHz Intel Core i7
 * 16 GB 2133 MHz LPDDR3
+
+## problems
+
+GJSON has just been finished, there may be some bugs and shortcomings, please feel free to issue. Also, Rust is a new language for me, and maybe gjson isn't rust enough, so I hope you have some suggestions.
+
+## License
+ MIT License.
