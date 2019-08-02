@@ -4,7 +4,7 @@
   <p>Get JSON values quickly - JSON Parser for Rust</p>
 
   <a href="https://github.com/importcjj/gjson">
-  <img src="https://travis-ci.com/importcjj/gjson2.svg?token=ZZrg3rRkUA8NUGrjEsU9&branch=master"></a>
+  <img src="https://travis-ci.com/importcjj/gjson.svg?branch=master"></a>
 
 
   <a href="https://importcjj.github.io/rust-gjson-playground/">
@@ -23,7 +23,7 @@ Add it to your `Cargo.toml` file:
 [dependencies]
 gjson = "*"
 ```
-Then import it to your code:
+Then add it to your code:
 ```rust
 extern crate gjson;
 ```
@@ -75,7 +75,6 @@ value.as_f64() -> f64
 value.as_bool() -> bool
 value.as_array() -> Vec<Value>
 value.as_map() -> HashMap<String, Value>
-
 value.get(&str) -> Value
 ```
 
@@ -174,8 +173,6 @@ Basically, you can use selectors to assemble whatever you want, and of course, t
 {name.first,age,"murphys":friends.#(last="Murphy")#.first}
 [name.first,age,children.0]
 ```
-
-Sometimes, you can use selectors to improve the performance of multiple path queries.
 
 ```rust
 gjson::get(json, "name.[first,last]").as_array();
