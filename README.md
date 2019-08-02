@@ -3,12 +3,12 @@
   <h1>R-JSON</h1>
   <p>Read JSON values quickly - Rust JSON Parser</p>
 
-  <a href="https://github.com/importcjj/rjson">
-  <img src="https://travis-ci.com/importcjj/rjson.svg?branch=master"></a>
+  <a href="https://github.com/importcjj/ajson">
+  <img src="https://travis-ci.com/importcjj/ajson.svg?branch=master"></a>
 
   <img src="https://img.shields.io/badge/crates.io-0.1.2-blue">
 
-  <a href="https://importcjj.github.io/rust-rjson-playground/">
+  <a href="https://importcjj.github.io/rust-ajson-playground/">
   <img src="https://img.shields.io/badge/goto-playground-orange">
 
 </a>
@@ -22,11 +22,11 @@ Inspiration comes from [gjson](https://github.com/tidwall/gjson) in golang
 Add it to your `Cargo.toml` file:
 ```
 [dependencies]
-rjson = "0.1"
+ajson = "0.1"
 ```
 Then add it to your code:
 ```rust
-extern crate rjson;
+extern crate ajson;
 ```
 
 ## Enjoy
@@ -37,7 +37,7 @@ RJSON get json value with specified path, such as `project.name` or `project.ver
 let data = r#"
 {
   "project": {
-    "name": "rjson",
+    "name": "ajson",
     "maintainer": "importcjj",
     "version": 0.1,
     "rusts": ["stable", "nightly"]
@@ -45,8 +45,8 @@ let data = r#"
 }
 "#;
 
-let name = rjson::get(data, "project.name");
-println!("{}", name.as_str()); // rjson
+let name = ajson::get(data, "project.name");
+println!("{}", name.as_str()); // ajson
 ```
 
 
@@ -94,7 +94,7 @@ Sometimes you need to check if value exists, you can use `exists()`. Notice that
 
 ```rust
 
-let v = rjson::get(json, "path");
+let v = ajson::get(json, "path");
 if v.exist() {
   println!("got it {}", value);
 }
@@ -176,9 +176,9 @@ Basically, you can use selectors to assemble whatever you want, and of course, t
 ```
 
 ```rust
-rjson::get(json, "name.[first,last]").as_array();
-rjson::get(json, "name.first"); 
-rjson::get(json, "name.last");
+ajson::get(json, "name.[first,last]").as_array();
+ajson::get(json, "name.first"); 
+ajson::get(json, "name.last");
 ```
 
 ## io::Read
@@ -189,7 +189,7 @@ Not only string, RJSON also can parse JSON from io::Read.
 use std::fs::File;
 
 let f = file::Open("path/to/json").unwrap();
-let json = rjson::parse_from_read(f);
+let json = ajson::parse_from_read(f);
 let value = json.get("a.b");
 println!("{}", value.as_str());
 ```
@@ -206,12 +206,12 @@ Maybe need a validate function 🤔
 
 `$ cargo bench`
 
-* [rjson](https://github.com/importcjj/rjson)
+* [ajson](https://github.com/importcjj/ajson)
 * [serde_json](https://github.com/serde-rs/json)
 * [rust-json](https://github.com/maciejhirsz/json-rust)
 
 ```
-rjson benchmark         time:   [6.7000 us 6.8023 us 6.9081 us]                             
+ajson benchmark         time:   [6.7000 us 6.8023 us 6.9081 us]                             
                         change: [-1.8368% -0.4152% +1.0466%] (p = 0.58 > 0.05)
                         No change in performance detected.
 Found 3 outliers among 100 measurements (3.00%)
@@ -238,7 +238,7 @@ Found 5 outliers among 100 measurements (5.00%)
 
 ## problems
 
-RJSON has just been finished, there may be some bugs and shortcomings, please feel free to issue. Also, Rust is a new language for me, and maybe rjson isn't rust enough, so I hope you have some suggestions.
+RJSON has just been finished, there may be some bugs and shortcomings, please feel free to issue. Also, Rust is a new language for me, and maybe ajson isn't rust enough, so I hope you have some suggestions.
 
 ## License
  MIT License.
