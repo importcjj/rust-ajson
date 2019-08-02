@@ -4,7 +4,7 @@
   <p>Read JSON values quickly - Rust JSON Parser</p>
 
   <a href="https://github.com/importcjj/ajson">
-  <img src="https://travis-ci.com/importcjj/ajson.svg?branch=master"></a>
+  <img src="https://travis-ci.org/importcjj/a-json.svg?branch=master"></a>
 
   <img src="https://img.shields.io/badge/crates.io-0.1.2-blue">
 
