@@ -16,6 +16,8 @@
 
 </div>
 
+
+#### change name to AJSON, see [issue](https://github.com/importcjj/a-json/issues/2)
 Inspiration comes from [gjson](https://github.com/tidwall/gjson) in golang
 
 ## Installation
