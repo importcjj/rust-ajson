@@ -116,7 +116,6 @@ pub trait ByteReader {
     }
 }
 
-
 pub struct RefReader<'a> {
     buffer: &'a [u8],
     offset: usize,
@@ -133,7 +132,6 @@ impl<'a> RefReader<'a> {
             overflow: false,
         }
     }
-
 
     // dangerous!!
     pub fn tail<'b>(&self, v: &'b [u8]) -> &'b [u8] {
@@ -152,7 +150,6 @@ impl<'a> RefReader<'a> {
         self.seek(prev + offset);
     }
 }
-
 
 impl<'a> ByteReader for RefReader<'a> {
     fn position(&self) -> usize {
@@ -210,7 +207,6 @@ impl<'a> ByteReader for RefReader<'a> {
     fn slice(&self, start: usize, end: usize) -> &[u8] {
         &self.buffer[start..end + 1]
     }
-
 }
 
 pub struct LazyReader<R>
@@ -259,7 +255,6 @@ where
         } else {
             self.offset - 1
         }
-
     }
     fn next(&mut self) -> Option<u8> {
         if self.overflow {
@@ -307,5 +302,4 @@ where
     fn slice(&self, start: usize, end: usize) -> &[u8] {
         &self.buffer[start..end + 1]
     }
-
 }

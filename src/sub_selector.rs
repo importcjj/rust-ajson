@@ -25,7 +25,6 @@ impl<'a> fmt::Debug for SubSelector<'a> {
     }
 }
 
-
 fn last_of_name(v: &[u8]) -> &[u8] {
     // for mut i in (0..v.len()).rev() {
     //     match v[i] {
@@ -36,7 +35,7 @@ fn last_of_name(v: &[u8]) -> &[u8] {
     // }
 
     if v.len() == 0 {
-        return v
+        return v;
     }
 
     let mut i = v.len() - 1;
@@ -47,7 +46,7 @@ fn last_of_name(v: &[u8]) -> &[u8] {
             _ => (),
         }
         if i == 0 {
-            break
+            break;
         }
         i -= 1;
     }
@@ -74,7 +73,6 @@ pub fn parse_selectors_from_utf8<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usiz
                 };
                 sels.push(sel);
             }
-
         }};
     };
 

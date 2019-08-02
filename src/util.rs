@@ -1,8 +1,6 @@
-
 pub fn trim_space_u8(v: &[u8]) -> &[u8] {
     trim_u8(v, b' ')
 }
-
 
 pub fn trim_u8(v: &[u8], b: u8) -> &[u8] {
     let length = v.len();

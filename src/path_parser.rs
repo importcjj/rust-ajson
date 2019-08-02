@@ -1,10 +1,10 @@
-use path::{Path, Query, QueryValue };
+use path::{Path, Query, QueryValue};
 use reader;
 use reader::ByteReader;
 use sub_selector;
 
-use util;
 use number::Number;
+use util;
 
 fn parse_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
     if v.len() == 0 {
@@ -68,11 +68,9 @@ fn parse_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
                             current_path.set_selectors(selectors);
                             reader.forward(offset - 1);
                             depth = 0;
-
                         }
                     }
                 }
-
             }
             _ => (),
         };
@@ -100,7 +98,6 @@ fn parse_query_from_utf8<'a>(v: &'a [u8]) -> (Query<'a>, usize) {
     let mut op_exsit = false;
     let mut op_start = 0;
     let mut op_end = 0;
-
 
     while let Some(b) = reader.peek() {
         match b {
@@ -161,7 +158,6 @@ fn parse_query_from_utf8<'a>(v: &'a [u8]) -> (Query<'a>, usize) {
         q.set_path(util::trim_space_u8(&v[..]));
     }
 
-
     (q, reader.offset())
 }
 
@@ -194,7 +190,7 @@ fn parser_query_value(v: &[u8]) -> (QueryValue, usize) {
                 // Value::Null
             }
             b'0'...b'9' | b'-' => {
-                let n =  Number::from(&mut reader);
+                let n = Number::from(&mut reader);
                 QueryValue::F64(n.as_f64())
             }
             _ => QueryValue::NotExsit,
@@ -268,7 +264,6 @@ fn parser_query_value(v: &[u8]) -> (QueryValue, usize) {
 //     (q, reader.position())
 // }
 
-
 pub fn new_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
     parse_path_from_utf8(v)
 }
@@ -278,7 +273,6 @@ fn new_query_from_utf8<'a>(v: &'a [u8]) -> Query<'a> {
     let (q, _) = parse_query_from_utf8(v);
     q
 }
-
 
 // fn parse_path<'a>(v: &'a [u8]) -> (Path<'a>, usize) {
 //     // println!("parse path {:?}", String::from_utf8_lossy(v));

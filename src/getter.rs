@@ -3,11 +3,11 @@ use reader;
 use std::collections::HashMap;
 use std::io;
 
-use std::str;
 use number::Number;
+use std::str;
 use sub_selector::SubSelector;
-use value::Value;
 use unescape;
+use value::Value;
 
 pub struct Getter<R>
 where
@@ -79,7 +79,6 @@ impl<R> Getter<R>
 where
     R: reader::ByteReader,
 {
-
     pub fn get(&mut self, path: &str) -> Value {
         let v = path.as_bytes();
         self.get_by_utf8(&v)
@@ -124,7 +123,6 @@ where
                                     }
                                     _ => panic!("invalid map key"),
                                 };
-
                             } else {
                                 m.insert(key_cache.take().unwrap(), self.parse_value(v));
                             }
@@ -164,9 +162,7 @@ where
         }
 
         arr
-
     }
-
 }
 
 impl<R> Getter<R>
@@ -193,7 +189,6 @@ where
         self.source.slice(start, end)
     }
 
-
     #[allow(dead_code)]
     fn value_to_raw_str<'b>(&'b mut self, v: &'b ParserValue) -> &'b str {
         match *v {
@@ -219,8 +214,9 @@ where
             | ParserValue::Array(start, end)
             | ParserValue::Number(start, end) => v.extend(self.bytes_slice(start, end)),
 
-            ParserValue::ArrayString(ref s)
-            | ParserValue::ObjectString(ref s) => v.extend(s.as_bytes()),
+            ParserValue::ArrayString(ref s) | ParserValue::ObjectString(ref s) => {
+                v.extend(s.as_bytes())
+            }
 
             ParserValue::Boolean(true) => v.extend("true".as_bytes()),
             ParserValue::Boolean(false) => v.extend("false".as_bytes()),
@@ -240,8 +236,9 @@ where
                 buffer.push_str(s)
             }
 
-            ParserValue::ArrayString(ref s)
-            | ParserValue::ObjectString(ref s) => buffer.push_str(s),
+            ParserValue::ArrayString(ref s) | ParserValue::ObjectString(ref s) => {
+                buffer.push_str(s)
+            }
 
             ParserValue::Boolean(true) => buffer.push_str("true"),
             ParserValue::Boolean(false) => buffer.push_str("false"),
@@ -259,7 +256,6 @@ where
         }
     }
 
-
     fn parse_value_borrow(&self, v: &ParserValue) -> Value {
         match *v {
             ParserValue::String(start, end) => {
@@ -276,11 +272,11 @@ where
                 Value::Array(s)
             }
 
-            ParserValue::ArrayString(_)
-            | ParserValue::ObjectString(_) => panic!("should not borrow string value"),
+            ParserValue::ArrayString(_) | ParserValue::ObjectString(_) => {
+                panic!("should not borrow string value")
+            }
 
             ParserValue::Number(start, end) => {
-                
                 let raw = self.bytes_slice(start, end);
                 let n = Number::from(raw);
 
@@ -297,7 +293,6 @@ where
         let mut raw = Vec::with_capacity(100);
         let start = self.position();
         raw.push(b'{');
-
 
         for sel in sels {
             let path = Path::new_from_utf8(sel.path);
@@ -318,19 +313,14 @@ where
         }
         raw.push(b'}');
 
-
         let s = String::from_utf8_lossy(&raw).to_string();
         ParserValue::ObjectString(s)
-
     }
 
-
     fn select_to_array(&mut self, sels: &[SubSelector]) -> ParserValue {
-
         let mut raw = Vec::with_capacity(100);
         let start = self.position();
         raw.push(b'[');
-
 
         for sel in sels {
             let path = Path::new_from_utf8(sel.path);
@@ -347,11 +337,9 @@ where
         }
         raw.push(b']');
 
-
         let s = String::from_utf8_lossy(&raw).to_string();
         ParserValue::ArrayString(s)
     }
-
 
     fn get_by_path(&mut self, path: &Path) -> ParserValue {
         if !path.ok {
@@ -368,7 +356,7 @@ where
                 self.get_from_value(&v, path.borrow_next())
             } else {
                 v
-            }
+            };
         }
 
         while let Some(b) = self.peek() {
@@ -448,7 +436,6 @@ where
 
         self.source.read_boolean_value();
 
-
         if is_true {
             ParserValue::Boolean(true)
         } else {
@@ -467,7 +454,6 @@ where
             Some(b'[') => false,
             _ => panic!("Not JSON"),
         };
-
 
         let (start, end) = self.source.read_json_value();
 
@@ -524,13 +510,11 @@ where
     fn get_from_array(&mut self, path: &Path) -> ParserValue {
         // println!("get array by path {:?}", path);
 
-
         let mut count = 0;
         let (idx, idx_get) = match str::from_utf8(path.part).unwrap().parse::<usize>() {
             Ok(i) => (i, true),
             Err(_) => (0, false),
         };
-
 
         let query = path.borrow_query();
         let query_key = query.get_path();
@@ -610,7 +594,6 @@ where
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

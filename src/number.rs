@@ -1,4 +1,3 @@
-
 use reader::{ByteReader, RefReader};
 use std::convert::From;
 const MIN_UINT_53: u64 = 0;
@@ -69,7 +68,6 @@ where
 }
 
 impl Number {
-
     pub fn as_str(&self) -> &str {
         match self {
             Number::F64(s) => s,
@@ -133,7 +131,6 @@ pub fn parse_uint_lossy(v: &[u8]) -> u64 {
 
     acc
 }
-
 
 pub fn parse_int_lossy(v: &[u8]) -> i64 {
     if v.len() == 0 {

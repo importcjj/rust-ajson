@@ -1,16 +1,14 @@
-extern crate json;
 extern crate gjson;
+extern crate json;
 extern crate serde_json;
 
+use gjson::{get as gjson_get, parse, Getter, Value};
 use std::env;
-use gjson::{get as gjson_get, parse, Value, Getter};
-
 
 // #[test]
 // fn test_json_rs_unicode() {
 
 //     use serde_json::Value;
-
 
 //     let data = r#"{"IdentityData":{"GameInstanceId":634866135153775564}}"#;
 //     // let a = &json::parse(data).unwrap();
@@ -52,11 +50,11 @@ use gjson::{get as gjson_get, parse, Value, Getter};
 //     assert_eq!(b["overflow_int53"].as_i64().unwrap(), 2251799813685248);
 //     assert_eq!(b["min_uint64"].as_u64().unwrap(), 0);
 //     assert_eq!(b["max_uint64"].as_u64().unwrap(), 18446744073709551615);
-    
+
 //     assert_eq!(b["overflow_uint64"].as_i64().unwrap(), 0);
 //     assert_eq!(b["min_int64"].as_i64().unwrap(), -9223372036854775808);
 //     assert_eq!(b["max_int64"].as_i64().unwrap(), 9223372036854775807);
-    
+
 //     assert_eq!(b["overflow_int64"].as_i64().unwrap(), -9223372036854775808);
 // }
 
@@ -153,7 +151,10 @@ fn test_example() {
     assert_eq!(r.get("c?ildren.0"), "Sara");
     assert_eq!(r.get("fav\\.movie"), "Deer Hunter");
     assert_eq!(r.get("friends.1.last"), "Craig");
-    assert_eq!(r.get("friends.#.first").as_array(), vec!["Dale","Roger","Jane"]);
+    assert_eq!(
+        r.get("friends.#.first").as_array(),
+        vec!["Dale", "Roger", "Jane"]
+    );
 }
 
 // friends.#(last=="Murphy").first   >> "Dale"
@@ -165,10 +166,19 @@ fn test_example() {
 fn test_query_example() {
     let r = parse(BASIC_JSON2);
     assert_eq!(r.get(r#"friends.#(last=="Murphy").first"#), "Dale");
-    assert_eq!(r.get(r#"friends.#(last=="Murphy")#.first"#).as_array(), vec!["Dale","Jane"]);
-    assert_eq!(r.get(r#"friends.#(age>45)#.last"#).as_array(), vec!["Craig","Murphy"]);
+    assert_eq!(
+        r.get(r#"friends.#(last=="Murphy")#.first"#).as_array(),
+        vec!["Dale", "Jane"]
+    );
+    assert_eq!(
+        r.get(r#"friends.#(age>45)#.last"#).as_array(),
+        vec!["Craig", "Murphy"]
+    );
     assert_eq!(r.get(r#"friends.#(first%"D*").last"#), "Murphy");
-    assert_eq!(r.get(r#"friends.#(nets.#(=="fb"))#.first"#).as_array(), vec!["Dale","Roger"]);
+    assert_eq!(
+        r.get(r#"friends.#(nets.#(=="fb"))#.first"#).as_array(),
+        vec!["Dale", "Roger"]
+    );
 }
 
 #[test]
@@ -215,7 +225,10 @@ fn test_basic_2() {
 
 #[test]
 fn test_basic_3() {
-    let t = gjson::parse(BASIC_JSON).get("loggy.programmers").get("1").get("firstName");
+    let t = gjson::parse(BASIC_JSON)
+        .get("loggy.programmers")
+        .get("1")
+        .get("firstName");
     assert_eq!(t, "Jason");
 
     let json = "-102";
@@ -280,8 +293,10 @@ fn test_basic_5() {
     assert_eq!(m["what is a wren?"], "a bird");
 
     let r = parse(&BASIC_JSON);
-    assert_eq!(r.as_map()["loggy"].as_map()["programmers"].as_array()[1].as_map()["firstName"], "Jason");
-    
+    assert_eq!(
+        r.as_map()["loggy"].as_map()["programmers"].as_array()[1].as_map()["firstName"],
+        "Jason"
+    );
 }
 
 #[test]
@@ -311,7 +326,6 @@ fn test_plus_53_bit_ints() {
     assert_eq!(v.as_u64(), 634866135153775564);
     assert_eq!(v.as_i64(), 634866135153775564);
     assert_eq!(v.as_f64(), 634866135153775616.0);
-
 
     let json = r#"{"IdentityData":{"GameInstanceId":634866135153775564.88172}}"#;
     let v = get(&json, "IdentityData.GameInstanceId");
@@ -344,11 +358,11 @@ fn test_plus_53_bit_ints() {
     assert_eq!(get(&json, "overflow_int53").as_i64(), 2251799813685248);
     assert_eq!(get(&json, "min_uint64").as_u64(), 0);
     assert_eq!(get(&json, "max_uint64").as_u64(), 18446744073709551615);
-    
+
     assert_eq!(get(&json, "overflow_uint64").as_i64(), 0);
     assert_eq!(get(&json, "min_int64").as_i64(), -9223372036854775808);
     assert_eq!(get(&json, "max_int64").as_i64(), 9223372036854775807);
-    
+
     assert_eq!(get(&json, "overflow_int64").as_i64(), 0);
 }
 
@@ -371,10 +385,7 @@ fn test_unicode() {
 fn test_emoji() {
     let input = r#"{"utf8":"Example emoji, KO: \ud83d\udd13, \ud83c\udfc3 OK: \u2764\ufe0f "}"#;
     let r = parse(input);
-    assert_eq!(
-        r.get("utf8"),
-        "Example emoji, KO: 🔓, 🏃 OK: ❤️ "
-    );
+    assert_eq!(r.get("utf8"), "Example emoji, KO: 🔓, 🏃 OK: ❤️ ");
 }
 
 #[test]
@@ -538,7 +549,7 @@ fn test_single_array_value() {
     let json = r#"{"key": "value","key2":[1,2,3,4,"A"]}"#;
     let r = get(&json, "key");
     let array = r.as_array();
-    
+
     assert_eq!(array.len(), 1);
     assert_eq!(array[0], "value");
 

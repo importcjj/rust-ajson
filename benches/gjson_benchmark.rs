@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate criterion;
 
-
 use criterion::black_box;
 use criterion::Criterion;
 extern crate gjson;
@@ -75,8 +74,6 @@ fn gjson_multi_query(json: &str) {
     ];
 }
 
-
-
 fn gjson_bench(json: &str) {
     gjson::get(json, "widget.window.name").as_str();
     gjson::get(json, "widget.image.hOffset").as_f64();
@@ -121,7 +118,8 @@ fn serde_json_bench(json: &str) {
 
     let menu = &serde_json::from_str::<Value>(BENCH_DATA).unwrap();
 
-    let _v: Vec<&Value> = menu["widget"]["menu"].as_array()
+    let _v: Vec<&Value> = menu["widget"]["menu"]
+        .as_array()
         .unwrap()
         .iter()
         .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
@@ -129,15 +127,23 @@ fn serde_json_bench(json: &str) {
         .collect();
 }
 
-
-
 fn criterion_benchmark(c: &mut Criterion) {
     // c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
-    c.bench_function("gjson benchmark", |b| b.iter(|| gjson_bench(black_box(BENCH_DATA))));
-    c.bench_function("serde_json benchmark", |b| b.iter(|| serde_json_bench(black_box(BENCH_DATA))));
-    c.bench_function("json-rust benchmark", |b| b.iter(|| json_rust_bench(black_box(BENCH_DATA))));
-    c.bench_function("gjson selector", |b| b.iter(|| gjson_selector(black_box(BENCH_DATA))));
-    c.bench_function("gjson multi query", |b| b.iter(|| gjson_multi_query(black_box(BENCH_DATA))));
+    c.bench_function("gjson benchmark", |b| {
+        b.iter(|| gjson_bench(black_box(BENCH_DATA)))
+    });
+    c.bench_function("serde_json benchmark", |b| {
+        b.iter(|| serde_json_bench(black_box(BENCH_DATA)))
+    });
+    c.bench_function("json-rust benchmark", |b| {
+        b.iter(|| json_rust_bench(black_box(BENCH_DATA)))
+    });
+    c.bench_function("gjson selector", |b| {
+        b.iter(|| gjson_selector(black_box(BENCH_DATA)))
+    });
+    c.bench_function("gjson multi query", |b| {
+        b.iter(|| gjson_multi_query(black_box(BENCH_DATA)))
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);

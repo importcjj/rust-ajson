@@ -84,7 +84,6 @@ impl<'a> Path<'a> {
         }
     }
 
-
     pub fn new_from_utf8(v: &'a [u8]) -> Path<'a> {
         path_parser::new_path_from_utf8(v)
     }
@@ -163,7 +162,6 @@ impl<'a> Path<'a> {
             None => &[],
         }
     }
-
 }
 
 #[derive(Debug, PartialEq)]
@@ -214,7 +212,6 @@ impl<'a> fmt::Debug for Query<'a> {
         write!(f, ">")
     }
 }
-
 
 impl<'a> Query<'a> {
     pub fn empty() -> Query<'a> {

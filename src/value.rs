@@ -1,7 +1,7 @@
 use getter::Getter;
 use number::Number;
-use std::collections::HashMap;
 use std::cmp;
+use std::collections::HashMap;
 use std::fmt;
 use std::str;
 
@@ -94,7 +94,6 @@ impl Value {
 }
 
 impl Value {
-
     pub fn as_str(&self) -> &str {
         match &self {
             Value::String(ref s) => s,

@@ -1,21 +1,20 @@
 extern crate regex;
 
 mod getter;
+mod number;
 mod path;
 mod path_parser;
-mod util;
-mod value;
-mod wild;
 mod reader;
 mod sub_selector;
 mod unescape;
-mod number;
+mod util;
+mod value;
+mod wild;
 
+pub use getter::Getter;
+pub use number::Number;
 use std::io;
 pub use value::Value;
-pub use getter::Getter;
-
-
 
 pub fn get(json: &str, path: &str) -> Value {
     Getter::new_from_utf8(json.as_bytes()).get(path)
@@ -33,7 +32,7 @@ where
     Getter::new_from_read(r).get(path)
 }
 
-pub fn parse_from_read<R>(r: R) -> Value 
+pub fn parse_from_read<R>(r: R) -> Value
 where
     R: io::Read,
 {
