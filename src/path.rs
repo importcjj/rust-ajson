@@ -278,9 +278,6 @@ impl<'a> Query<'a> {
 
     pub fn is_match(&self, v: &Value) -> bool {
         // println!("match value {:?} {:?}",self, v);
-        if !v.exists() {
-            return false;
-        }
 
         if self.value.is_none() {
             return true;
