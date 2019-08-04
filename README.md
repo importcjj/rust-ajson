@@ -54,7 +54,7 @@ let data = r#"
 }
 "#;
 
-let name = ajson::get(data, "project.name");
+let name = ajson::get(data, "project.name").unwrap();
 println!("{}", name.as_str()); // ajson
 ```
 
@@ -130,9 +130,9 @@ Basically, you can use selectors to assemble whatever you want, and of course, t
 ```
 
 ```rust
-ajson::get(json, "name.[first,last]").to_vec();
-ajson::get(json, "name.first"); 
-ajson::get(json, "name.last");
+ajson::get(json, "name.[first,last]").unwrap().to_vec();
+ajson::get(json, "name.first").unwrap(); 
+ajson::get(json, "name.last").unwrap();
 ```
 
 ## Value
@@ -185,8 +185,8 @@ Not only string, AJSON also can parse JSON from io::Read.
 use std::fs::File;
 
 let f = file::Open("path/to/json").unwrap();
-let json = ajson::parse_from_read(f);
-let value = json.get("a.b");
+let json = ajson::parse_from_read(f).unwrap();
+let value = json.get("a.b").unwrap();
 println!("{}", value.as_str());
 ```
 
