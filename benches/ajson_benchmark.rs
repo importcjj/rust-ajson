@@ -88,7 +88,7 @@ fn json_rust_bench(data: &str) {
     let a = &json::parse(data).unwrap();
     a["widget"]["window"]["name"].as_str().unwrap();
     let b = &json::parse(data).unwrap();
-    b["widget"]["image"]["hOffset"].to_i64().unwrap();
+    b["widget"]["image"]["hOffset"].as_i64().unwrap();
     let c = &json::parse(data).unwrap();
     c["widget"]["text"]["onMouseUp"].as_str().unwrap();
     let d = &json::parse(data).unwrap();
@@ -99,7 +99,7 @@ fn json_rust_bench(data: &str) {
     let menu = &json::parse(data).unwrap()["widget"]["menu"];
     let _v: Vec<&JsonValue> = menu
         .members()
-        .filter(|x| x["sub_item"].to_i64().unwrap() > 5)
+        .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
         .map(|x| &x["title"])
         .collect();
 }
@@ -108,7 +108,7 @@ fn serde_json_bench(json: &str) {
     let a = &serde_json::from_str::<Value>(json).unwrap();
     a["widget"]["window"]["name"].as_str().unwrap();
     let b = &serde_json::from_str::<Value>(json).unwrap();
-    b["widget"]["image"]["hOffset"].to_i64().unwrap();
+    b["widget"]["image"]["hOffset"].as_i64().unwrap();
     let c = &serde_json::from_str::<Value>(json).unwrap();
     c["widget"]["text"]["onMouseUp"].as_str().unwrap();
     let d = &serde_json::from_str::<Value>(json).unwrap();
@@ -119,10 +119,10 @@ fn serde_json_bench(json: &str) {
     let menu = &serde_json::from_str::<Value>(BENCH_DATA).unwrap();
 
     let _v: Vec<&Value> = menu["widget"]["menu"]
-        .to_vec()
+        .as_array()
         .unwrap()
         .iter()
-        .filter(|x| x["sub_item"].to_i64().unwrap() > 5)
+        .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
         .map(|x| &x["title"])
         .collect();
 }
