@@ -151,7 +151,7 @@ impl Value {
     }
 }
 
-impl cmp::PartialEq<&str> for Value {
+impl<'a> cmp::PartialEq<&'a str> for Value {
     fn eq(&self, other: &&str) -> bool {
         self.as_str() == *other
     }

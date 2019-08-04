@@ -15,20 +15,20 @@ pub enum Number {
     I64(String),
 }
 
-impl From<&[u8]> for Number {
+impl<'a> From<&'a [u8]> for Number {
     fn from(v: &[u8]) -> Number {
         let mut reader = RefReader::new(v);
         Number::from(&mut reader)
     }
 }
 
-impl From<&str> for Number {
+impl<'a> From<&'a str> for Number {
     fn from(s: &str) -> Number {
         Number::from(s.as_bytes())
     }
 }
 
-impl<R> From<&mut R> for Number
+impl<'a, R> From<&'a mut R> for Number
 where
     R: ByteReader,
 {
