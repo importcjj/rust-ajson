@@ -38,7 +38,7 @@ extern crate ajson;
 * Update benchmark
 * Optimize
 
-## Enjoy
+## A simple example
 
 AJSON get json value with specified path, such as `project.name` or `project.version`. When the path matches, it returns immediately!
 
