@@ -100,7 +100,7 @@ where
         }
     }
 
-    pub fn as_map(&mut self) -> HashMap<String, Value> {
+    pub fn to_object(&mut self) -> HashMap<String, Value> {
         let mut m = HashMap::new();
         let mut key_cache: Option<String> = None;
         let mut count = 0;
@@ -140,7 +140,7 @@ where
         m
     }
 
-    pub fn as_array(&mut self) -> Vec<Value> {
+    pub fn to_vec(&mut self) -> Vec<Value> {
         let mut arr = Vec::new();
         'outer: while let Some(b) = self.peek() {
             match b {

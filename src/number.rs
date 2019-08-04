@@ -76,7 +76,7 @@ impl Number {
         }
     }
 
-    pub fn as_f64(&self) -> f64 {
+    pub fn to_f64(&self) -> f64 {
         // println!("{:?}", self);
         match self {
             Number::F64(s) => s.parse().unwrap_or(ZERO_FLOAT),
@@ -85,19 +85,19 @@ impl Number {
         }
     }
 
-    pub fn as_u64(&self) -> u64 {
+    pub fn to_u64(&self) -> u64 {
         // println!("{:?}", self);
         match self {
-            Number::F64(s) => f64_to_u64(self.as_f64()).unwrap_or(parse_uint_lossy(s.as_bytes())),
+            Number::F64(s) => f64_to_u64(self.to_f64()).unwrap_or(parse_uint_lossy(s.as_bytes())),
             Number::I64(s) => s.parse().unwrap_or(ZERO_UINT),
             Number::U64(s) => s.parse().unwrap_or(ZERO_UINT),
         }
     }
 
-    pub fn as_i64(&self) -> i64 {
+    pub fn to_i64(&self) -> i64 {
         // println!("{:?}", self);
         match self {
-            Number::F64(s) => f64_to_i64(self.as_f64()).unwrap_or(parse_int_lossy(s.as_bytes())),
+            Number::F64(s) => f64_to_i64(self.to_f64()).unwrap_or(parse_int_lossy(s.as_bytes())),
             Number::I64(s) => s.parse().unwrap_or(ZERO_INT),
             Number::U64(s) => s.parse().unwrap_or(ZERO_INT),
         }

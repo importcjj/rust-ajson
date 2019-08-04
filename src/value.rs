@@ -107,51 +107,51 @@ impl Value {
         }
     }
 
-    pub fn as_f64(&self) -> f64 {
+    pub fn to_f64(&self) -> f64 {
         match self {
-            Value::Number(number) => number.as_f64(),
+            Value::Number(number) => number.to_f64(),
             Value::Boolean(true) => 1.0,
-            Value::String(s) => Number::from(s.as_bytes()).as_f64(),
+            Value::String(s) => Number::from(s.as_bytes()).to_f64(),
             _ => 0.0,
         }
     }
 
-    pub fn as_u64(&self) -> u64 {
+    pub fn to_u64(&self) -> u64 {
         match self {
-            Value::Number(number) => number.as_u64(),
+            Value::Number(number) => number.to_u64(),
             Value::Boolean(true) => 1,
-            Value::String(s) => Number::from(s.as_bytes()).as_u64(),
+            Value::String(s) => Number::from(s.as_bytes()).to_u64(),
             _ => 0,
         }
     }
 
-    pub fn as_i64(&self) -> i64 {
+    pub fn to_i64(&self) -> i64 {
         match self {
-            Value::Number(number) => number.as_i64(),
+            Value::Number(number) => number.to_i64(),
             Value::Boolean(true) => 1,
-            Value::String(ref s) => Number::from(s.as_bytes()).as_i64(),
+            Value::String(ref s) => Number::from(s.as_bytes()).to_i64(),
             _ => 0,
         }
     }
 
-    pub fn as_bool(&self) -> bool {
+    pub fn to_bool(&self) -> bool {
         match *self {
             Value::Boolean(b) => b,
             _ => false,
         }
     }
 
-    pub fn as_array(&self) -> Vec<Value> {
+    pub fn to_vec(&self) -> Vec<Value> {
         match self {
-            Value::Array(s) => Getter::from_str(s).as_array(),
+            Value::Array(s) => Getter::from_str(s).to_vec(),
             Value::Null | Value::NotExist => vec![],
             _ => vec![self.clone()],
         }
     }
 
-    pub fn as_map(&self) -> HashMap<String, Value> {
+    pub fn to_object(&self) -> HashMap<String, Value> {
         match self {
-            Value::Object(s) => Getter::from_str(s).as_map(),
+            Value::Object(s) => Getter::from_str(s).to_object(),
             _ => HashMap::new(),
         }
     }
@@ -165,6 +165,6 @@ impl cmp::PartialEq<&str> for Value {
 
 impl cmp::PartialEq<f64> for Value {
     fn eq(&self, other: &f64) -> bool {
-        self.as_f64() == *other
+        self.to_f64() == *other
     }
 }

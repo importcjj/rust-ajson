@@ -13,15 +13,15 @@ use std::env;
 //     let data = r#"{"IdentityData":{"GameInstanceId":634866135153775564}}"#;
 //     // let a = &json::parse(data).unwrap();
 //     let a = &serde_json::from_str::<Value>(data).unwrap();
-//     println!("{}", a["IdentityData"]["GameInstanceId"].as_u64().unwrap());
-//     println!("{}", a["IdentityData"]["GameInstanceId"].as_i64().unwrap());
-//     println!("{}", a["IdentityData"]["GameInstanceId"].as_f64().unwrap());
+//     println!("{}", a["IdentityData"]["GameInstanceId"].to_u64().unwrap());
+//     println!("{}", a["IdentityData"]["GameInstanceId"].to_i64().unwrap());
+//     println!("{}", a["IdentityData"]["GameInstanceId"].to_f64().unwrap());
 
 //     let data = r#"{"IdentityData":{"GameInstanceId":634866135153775564.88172}}"#;
 //     let a = &serde_json::from_str::<Value>(data).unwrap();
-//     // println!("{}", a["IdentityData"]["GameInstanceId"].as_u64().unwrap());
-//     // println!("{}", a["IdentityData"]["GameInstanceId"].as_i64().unwrap());
-//     println!("{}", a["IdentityData"]["GameInstanceId"].as_f64().unwrap());
+//     // println!("{}", a["IdentityData"]["GameInstanceId"].to_u64().unwrap());
+//     // println!("{}", a["IdentityData"]["GameInstanceId"].to_i64().unwrap());
+//     println!("{}", a["IdentityData"]["GameInstanceId"].to_f64().unwrap());
 
 //     let data = r#"
 //     {
@@ -42,20 +42,20 @@ use std::env;
 
 //     // let b = &json::parse(data).unwrap();
 //     let b = &serde_json::from_str::<Value>(data).unwrap();
-//     assert_eq!(b["min_uint53"].as_u64().unwrap(), 0);
-//     assert_eq!(b["max_uint53"].as_u64().unwrap(), 4503599627370495);
-//     assert_eq!(b["overflow_uint53"].as_i64().unwrap(), 4503599627370496);
-//     assert_eq!(b["min_int53"].as_i64().unwrap(), -2251799813685248);
-//     assert_eq!(b["max_int53"].as_i64().unwrap(), 2251799813685247);
-//     assert_eq!(b["overflow_int53"].as_i64().unwrap(), 2251799813685248);
-//     assert_eq!(b["min_uint64"].as_u64().unwrap(), 0);
-//     assert_eq!(b["max_uint64"].as_u64().unwrap(), 18446744073709551615);
+//     assert_eq!(b["min_uint53"].to_u64().unwrap(), 0);
+//     assert_eq!(b["max_uint53"].to_u64().unwrap(), 4503599627370495);
+//     assert_eq!(b["overflow_uint53"].to_i64().unwrap(), 4503599627370496);
+//     assert_eq!(b["min_int53"].to_i64().unwrap(), -2251799813685248);
+//     assert_eq!(b["max_int53"].to_i64().unwrap(), 2251799813685247);
+//     assert_eq!(b["overflow_int53"].to_i64().unwrap(), 2251799813685248);
+//     assert_eq!(b["min_uint64"].to_u64().unwrap(), 0);
+//     assert_eq!(b["max_uint64"].to_u64().unwrap(), 18446744073709551615);
 
-//     assert_eq!(b["overflow_uint64"].as_i64().unwrap(), 0);
-//     assert_eq!(b["min_int64"].as_i64().unwrap(), -9223372036854775808);
-//     assert_eq!(b["max_int64"].as_i64().unwrap(), 9223372036854775807);
+//     assert_eq!(b["overflow_uint64"].to_i64().unwrap(), 0);
+//     assert_eq!(b["min_int64"].to_i64().unwrap(), -9223372036854775808);
+//     assert_eq!(b["max_int64"].to_i64().unwrap(), 9223372036854775807);
 
-//     assert_eq!(b["overflow_int64"].as_i64().unwrap(), -9223372036854775808);
+//     assert_eq!(b["overflow_int64"].to_i64().unwrap(), -9223372036854775808);
 // }
 
 fn get(json: &str, path: &str) -> Value {
@@ -143,16 +143,16 @@ static BASIC_JSON2: &'static str = r#"
 fn test_example() {
     let r = parse(BASIC_JSON2);
     assert_eq!(r.get("name.last"), "Anderson");
-    assert_eq!(r.get("age").as_i64(), 37);
-    assert_eq!(r.get("children").as_array(), vec!["Sara", "Alex", "Jack"]);
-    assert_eq!(r.get("children.#").as_i64(), 3);
+    assert_eq!(r.get("age").to_i64(), 37);
+    assert_eq!(r.get("children").to_vec(), vec!["Sara", "Alex", "Jack"]);
+    assert_eq!(r.get("children.#").to_i64(), 3);
     assert_eq!(r.get("children.1"), "Alex");
     assert_eq!(r.get("child*.2"), "Jack");
     assert_eq!(r.get("c?ildren.0"), "Sara");
     assert_eq!(r.get("fav\\.movie"), "Deer Hunter");
     assert_eq!(r.get("friends.1.last"), "Craig");
     assert_eq!(
-        r.get("friends.#.first").as_array(),
+        r.get("friends.#.first").to_vec(),
         vec!["Dale", "Roger", "Jane"]
     );
 }
@@ -167,16 +167,16 @@ fn test_query_example() {
     let r = parse(BASIC_JSON2);
     assert_eq!(r.get(r#"friends.#(last=="Murphy").first"#), "Dale");
     assert_eq!(
-        r.get(r#"friends.#(last=="Murphy")#.first"#).as_array(),
+        r.get(r#"friends.#(last=="Murphy")#.first"#).to_vec(),
         vec!["Dale", "Jane"]
     );
     assert_eq!(
-        r.get(r#"friends.#(age>45)#.last"#).as_array(),
+        r.get(r#"friends.#(age>45)#.last"#).to_vec(),
         vec!["Craig", "Murphy"]
     );
     assert_eq!(r.get(r#"friends.#(first%"D*").last"#), "Murphy");
     assert_eq!(
-        r.get(r#"friends.#(nets.#(=="fb"))#.first"#).as_array(),
+        r.get(r#"friends.#(nets.#(=="fb"))#.first"#).to_vec(),
         vec!["Dale", "Roger"]
     );
 }
@@ -192,7 +192,7 @@ fn test_basic() {
     );
     assert_eq!(
         r.get(r#"loggy.programmers.#[tag="good"]#.firstName"#)
-            .as_array(),
+            .to_vec(),
         vec!["Brett", "Elliotte"]
     );
 }
@@ -216,11 +216,11 @@ fn test_basic_2() {
 
     mtok = r.get("loggy");
     assert!(mtok.is_object());
-    println!("{:?}", mtok.as_map());
-    assert_eq!(mtok.as_map().len(), 1);
+    println!("{:?}", mtok.to_object());
+    assert_eq!(mtok.to_object().len(), 1);
 
-    let programmers = &mtok.as_map()["programmers"];
-    assert_eq!(programmers.as_array()[1].as_map()["firstName"], "Jason");
+    let programmers = &mtok.to_object()["programmers"];
+    assert_eq!(programmers.to_vec()[1].to_object()["firstName"], "Jason");
 }
 
 #[test]
@@ -252,12 +252,12 @@ fn test_basic_3() {
     assert_eq!(t, "\"he\nllo\"");
 
     let t = parse(BASIC_JSON).get("loggy.programmers.#.firstName");
-    assert_eq!(t.as_array().len(), 4);
-    assert_eq!(t.as_array(), ["Brett", "Jason", "Elliotte", "1002.3"]);
+    assert_eq!(t.to_vec().len(), 4);
+    assert_eq!(t.to_vec(), ["Brett", "Jason", "Elliotte", "1002.3"]);
 
     let t = parse(BASIC_JSON).get("loggy.programmers.#.asd");
     assert!(t.is_array());
-    assert_eq!(t.as_array().len(), 0);
+    assert_eq!(t.to_vec().len(), 0);
 }
 
 #[test]
@@ -288,13 +288,13 @@ fn test_basic_5() {
     assert_eq!(get(&BASIC_JSON, "immortal"), "false");
 
     let t = get(&BASIC_JSON, "noop");
-    let m = t.as_map();
+    let m = t.to_object();
     assert_eq!(m.len(), 1);
     assert_eq!(m["what is a wren?"], "a bird");
 
     let r = parse(&BASIC_JSON);
     assert_eq!(
-        r.as_map()["loggy"].as_map()["programmers"].as_array()[1].as_map()["firstName"],
+        r.to_object()["loggy"].to_object()["programmers"].to_vec()[1].to_object()["firstName"],
         "Jason"
     );
 }
@@ -314,7 +314,7 @@ fn test_is_array_is_object() {
     assert!(mtok.is_array());
 
     mtok = r.get("loggy.programmers.0.firstName");
-    println!("{:?}", mtok.as_map());
+    println!("{:?}", mtok.to_object());
     assert!(!mtok.is_object());
     assert!(!mtok.is_array());
 }
@@ -323,15 +323,15 @@ fn test_is_array_is_object() {
 fn test_plus_53_bit_ints() {
     let json = r#"{"IdentityData":{"GameInstanceId":634866135153775564}}"#;
     let v = get(&json, "IdentityData.GameInstanceId");
-    assert_eq!(v.as_u64(), 634866135153775564);
-    assert_eq!(v.as_i64(), 634866135153775564);
-    assert_eq!(v.as_f64(), 634866135153775616.0);
+    assert_eq!(v.to_u64(), 634866135153775564);
+    assert_eq!(v.to_i64(), 634866135153775564);
+    assert_eq!(v.to_f64(), 634866135153775616.0);
 
     let json = r#"{"IdentityData":{"GameInstanceId":634866135153775564.88172}}"#;
     let v = get(&json, "IdentityData.GameInstanceId");
-    assert_eq!(v.as_u64(), 634866135153775564);
-    assert_eq!(v.as_i64(), 634866135153775564);
-    assert_eq!(v.as_f64(), 634866135153775616.88172);
+    assert_eq!(v.to_u64(), 634866135153775564);
+    assert_eq!(v.to_i64(), 634866135153775564);
+    assert_eq!(v.to_f64(), 634866135153775616.88172);
 
     let json = r#"
     {
@@ -350,28 +350,28 @@ fn test_plus_53_bit_ints() {
 	}
     "#;
 
-    assert_eq!(get(json, "min_uint53").as_u64(), 0);
-    assert_eq!(get(&json, "max_uint53").as_u64(), 4503599627370495);
-    assert_eq!(get(&json, "overflow_uint53").as_i64(), 4503599627370496);
-    assert_eq!(get(&json, "min_int53").as_i64(), -2251799813685248);
-    assert_eq!(get(&json, "max_int53").as_i64(), 2251799813685247);
-    assert_eq!(get(&json, "overflow_int53").as_i64(), 2251799813685248);
-    assert_eq!(get(&json, "min_uint64").as_u64(), 0);
-    assert_eq!(get(&json, "max_uint64").as_u64(), 18446744073709551615);
+    assert_eq!(get(json, "min_uint53").to_u64(), 0);
+    assert_eq!(get(&json, "max_uint53").to_u64(), 4503599627370495);
+    assert_eq!(get(&json, "overflow_uint53").to_i64(), 4503599627370496);
+    assert_eq!(get(&json, "min_int53").to_i64(), -2251799813685248);
+    assert_eq!(get(&json, "max_int53").to_i64(), 2251799813685247);
+    assert_eq!(get(&json, "overflow_int53").to_i64(), 2251799813685248);
+    assert_eq!(get(&json, "min_uint64").to_u64(), 0);
+    assert_eq!(get(&json, "max_uint64").to_u64(), 18446744073709551615);
 
-    assert_eq!(get(&json, "overflow_uint64").as_i64(), 0);
-    assert_eq!(get(&json, "min_int64").as_i64(), -9223372036854775808);
-    assert_eq!(get(&json, "max_int64").as_i64(), 9223372036854775807);
+    assert_eq!(get(&json, "overflow_uint64").to_i64(), 0);
+    assert_eq!(get(&json, "min_int64").to_i64(), -9223372036854775808);
+    assert_eq!(get(&json, "max_int64").to_i64(), 9223372036854775807);
 
-    assert_eq!(get(&json, "overflow_int64").as_i64(), 0);
+    assert_eq!(get(&json, "overflow_int64").to_i64(), 0);
 }
 
 #[test]
 fn test_unicode() {
     let json = r#"{"key":0,"的情况下解":{"key":1,"的情况":2}}"#;
     let r = parse(json);
-    println!("{:?}", r.as_map());
-    println!("{:?}", r.get("的情况下解").as_map());
+    println!("{:?}", r.to_object());
+    println!("{:?}", r.get("的情况下解").to_object());
     assert_eq!(r.get("的情况下解.key"), 1.0);
     assert_eq!(r.get("的情况下解.的情况"), 2.0);
     assert_eq!(r.get("的情况下解.的?况"), 2.0);
@@ -390,9 +390,9 @@ fn test_emoji() {
 
 #[test]
 fn test_parse_any() {
-    assert_eq!(parse("100").as_f64(), 100 as f64);
-    assert_eq!(parse("true").as_bool(), true);
-    assert_eq!(parse("false").as_bool(), false);
+    assert_eq!(parse("100").to_f64(), 100 as f64);
+    assert_eq!(parse("true").to_bool(), true);
+    assert_eq!(parse("false").to_bool(), false);
     assert_eq!(parse("yikes").exists(), false);
 }
 
@@ -402,10 +402,10 @@ fn test_map() {
     let b = r#"{"asdf":"ghjk""#;
     let c = String::from(r#"**invalid**"#);
     let d = String::from(r#"{"#);
-    assert_eq!(parse(a).as_map().len(), 0);
-    assert_eq!(parse(b).as_map()["asdf"], "ghjk");
-    assert_eq!(Value::Object(c).as_map().len(), 0);
-    assert_eq!(Value::Object(d).as_map().len(), 0);
+    assert_eq!(parse(a).to_object().len(), 0);
+    assert_eq!(parse(b).to_object()["asdf"], "ghjk");
+    assert_eq!(Value::Object(c).to_object().len(), 0);
+    assert_eq!(Value::Object(d).to_object().len(), 0);
 }
 
 #[test]
@@ -455,13 +455,13 @@ fn test_array() {
     }"#;
     let r = parse(json);
     let a = r.get("widget.menu.#(sub_item>5)#.title");
-    assert_eq!(a.as_array(), vec!["file", "edit"]);
+    assert_eq!(a.to_vec(), vec!["file", "edit"]);
 
     let a = r.get("widget.menu.#.options.#(>4)");
-    assert_eq!(a.as_array(), vec!["5", "6"]);
+    assert_eq!(a.to_vec(), vec!["5", "6"]);
 
     let a = r.get("widget.menu.#.options.#(>4)#");
-    assert_eq!(a.as_array().len(), 3);
+    assert_eq!(a.to_vec().len(), 3);
 }
 
 #[test]
@@ -530,10 +530,10 @@ fn test_escape_path() {
 
 #[test]
 fn test_null_array() {
-    assert_eq!(parse(r#"{"data":null}"#).get("data").as_array().len(), 0);
-    assert_eq!(parse(r#"{}"#).get("data").as_array().len(), 0);
-    assert_eq!(parse(r#"{"data":[]}"#).get("data").as_array().len(), 0);
-    assert_eq!(parse(r#"{"data":[null]}"#).get("data").as_array().len(), 1);
+    assert_eq!(parse(r#"{"data":null}"#).get("data").to_vec().len(), 0);
+    assert_eq!(parse(r#"{}"#).get("data").to_vec().len(), 0);
+    assert_eq!(parse(r#"{"data":[]}"#).get("data").to_vec().len(), 0);
+    assert_eq!(parse(r#"{"data":[null]}"#).get("data").to_vec().len(), 1);
 }
 
 #[test]
@@ -548,17 +548,17 @@ fn test_token_raw_for_literal() {
 fn test_single_array_value() {
     let json = r#"{"key": "value","key2":[1,2,3,4,"A"]}"#;
     let r = get(&json, "key");
-    let array = r.as_array();
+    let array = r.to_vec();
 
     assert_eq!(array.len(), 1);
     assert_eq!(array[0], "value");
 
     let r = get(&json, "key2.#");
-    let array = r.as_array();
+    let array = r.to_vec();
     assert_eq!(array.len(), 1);
 
     let r = get(&json, "key3");
-    let array = r.as_array();
+    let array = r.to_vec();
     assert_eq!(array.len(), 0);
 }
 

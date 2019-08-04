@@ -130,7 +130,7 @@ Basically, you can use selectors to assemble whatever you want, and of course, t
 ```
 
 ```rust
-ajson::get(json, "name.[first,last]").as_array();
+ajson::get(json, "name.[first,last]").to_vec();
 ajson::get(json, "name.first"); 
 ajson::get(json, "name.last");
 ```
@@ -154,12 +154,12 @@ Value has a number of methods that meet your different needs.
 
 ```rust
 value.as_str() -> &str
-value.as_u64() -> u64
-value.as_i64() -> i64
-value.as_f64() -> f64
-value.as_bool() -> bool
-value.as_array() -> Vec<Value>
-value.as_map() -> HashMap<String, Value>
+value.to_u64() -> u64
+value.to_i64() -> i64
+value.to_f64() -> f64
+value.to_bool() -> bool
+value.to_vec() -> Vec<Value>
+value.to_object() -> HashMap<String, Value>
 value.get(&str) -> Value
 ```
 

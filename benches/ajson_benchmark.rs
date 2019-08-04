@@ -64,7 +64,7 @@ static BENCH_DATA: &'static str = r#"{
 // }
 
 fn ajson_selector(json: &str) {
-    ajson::get(json, "widget.[image.src,text.data]").as_array();
+    ajson::get(json, "widget.[image.src,text.data]").to_vec();
 }
 
 fn ajson_multi_query(json: &str) {
@@ -76,19 +76,19 @@ fn ajson_multi_query(json: &str) {
 
 fn ajson_bench(json: &str) {
     ajson::get(json, "widget.window.name").as_str();
-    ajson::get(json, "widget.image.hOffset").as_f64();
+    ajson::get(json, "widget.image.hOffset").to_f64();
     ajson::get(json, "widget.text.onMouseUp").as_str();
     ajson::get(json, "widget.debug").as_str();
-    // ajson::get(json, "widget.text").as_map();
-    ajson::get(json, "widget.menu.#(sub_item>7)#.title").as_array();
-    // ajson::get(json, "widget.menu.[1.title,2.options]").as_array();
+    // ajson::get(json, "widget.text").to_object();
+    ajson::get(json, "widget.menu.#(sub_item>7)#.title").to_vec();
+    // ajson::get(json, "widget.menu.[1.title,2.options]").to_vec();
 }
 
 fn json_rust_bench(data: &str) {
     let a = &json::parse(data).unwrap();
     a["widget"]["window"]["name"].as_str().unwrap();
     let b = &json::parse(data).unwrap();
-    b["widget"]["image"]["hOffset"].as_i64().unwrap();
+    b["widget"]["image"]["hOffset"].to_i64().unwrap();
     let c = &json::parse(data).unwrap();
     c["widget"]["text"]["onMouseUp"].as_str().unwrap();
     let d = &json::parse(data).unwrap();
@@ -99,7 +99,7 @@ fn json_rust_bench(data: &str) {
     let menu = &json::parse(data).unwrap()["widget"]["menu"];
     let _v: Vec<&JsonValue> = menu
         .members()
-        .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
+        .filter(|x| x["sub_item"].to_i64().unwrap() > 5)
         .map(|x| &x["title"])
         .collect();
 }
@@ -108,7 +108,7 @@ fn serde_json_bench(json: &str) {
     let a = &serde_json::from_str::<Value>(json).unwrap();
     a["widget"]["window"]["name"].as_str().unwrap();
     let b = &serde_json::from_str::<Value>(json).unwrap();
-    b["widget"]["image"]["hOffset"].as_i64().unwrap();
+    b["widget"]["image"]["hOffset"].to_i64().unwrap();
     let c = &serde_json::from_str::<Value>(json).unwrap();
     c["widget"]["text"]["onMouseUp"].as_str().unwrap();
     let d = &serde_json::from_str::<Value>(json).unwrap();
@@ -119,10 +119,10 @@ fn serde_json_bench(json: &str) {
     let menu = &serde_json::from_str::<Value>(BENCH_DATA).unwrap();
 
     let _v: Vec<&Value> = menu["widget"]["menu"]
-        .as_array()
+        .to_vec()
         .unwrap()
         .iter()
-        .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
+        .filter(|x| x["sub_item"].to_i64().unwrap() > 5)
         .map(|x| &x["title"])
         .collect();
 }

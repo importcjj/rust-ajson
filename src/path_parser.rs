@@ -191,7 +191,7 @@ fn parser_query_value(v: &[u8]) -> (QueryValue, usize) {
             }
             b'0'...b'9' | b'-' => {
                 let n = Number::from(&mut reader);
-                QueryValue::F64(n.as_f64())
+                QueryValue::F64(n.to_f64())
             }
             _ => QueryValue::NotExist,
         };

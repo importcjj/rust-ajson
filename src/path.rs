@@ -312,13 +312,13 @@ impl<'a> Query<'a> {
 
             QueryValue::F64(q) => match v {
                 Value::Number(n) => match op.as_str() {
-                    "=" => n.as_f64() == *q,
-                    "==" => n.as_f64() == *q,
-                    "!=" => n.as_f64() != *q,
-                    "<" => n.as_f64() < *q,
-                    "<=" => n.as_f64() <= *q,
-                    ">" => n.as_f64() > *q,
-                    ">=" => n.as_f64() >= *q,
+                    "=" => n.to_f64() == *q,
+                    "==" => n.to_f64() == *q,
+                    "!=" => n.to_f64() != *q,
+                    "<" => n.to_f64() < *q,
+                    "<=" => n.to_f64() <= *q,
+                    ">" => n.to_f64() > *q,
+                    ">=" => n.to_f64() >= *q,
                     _ => false,
                 },
                 _ => false,
