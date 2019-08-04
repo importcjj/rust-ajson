@@ -13,13 +13,11 @@ pub enum Value {
     Array(String),
     Boolean(bool),
     Null,
-    NotExist,
 }
 
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::NotExist => write!(f, "<NOT Exist>"),
             Value::String(_) => write!(f, r#""{}""#, self.as_str()),
             _ => write!(f, "{}", self.as_str()),
         }
@@ -33,22 +31,19 @@ impl fmt::Display for Value {
 }
 
 impl Value {
-    pub fn get(&self, path: &str) -> Value {
+    pub fn get(&self, path: &str) -> Option<Value> {
         self.get_by_utf8(&path.as_bytes())
     }
 
-    pub fn get_by_utf8(&self, v: &[u8]) -> Value {
+    pub fn get_by_utf8(&self, v: &[u8]) -> Option<Value> {
         match self {
             Value::Array(s) | Value::Object(s) => Getter::from_str(s).get_by_utf8(v),
-            _ => Value::NotExist,
+            _ => None,
         }
     }
 }
 
 impl Value {
-    pub fn exists(&self) -> bool {
-        *self != Value::NotExist
-    }
 
     pub fn is_string(&self) -> bool {
         match self {
@@ -102,7 +97,6 @@ impl Value {
             Value::Boolean(false) => "false",
             Value::Object(ref s) => s,
             Value::Array(ref s) => s,
-            Value::NotExist => "",
             Value::Null => "null",
         }
     }
@@ -144,7 +138,7 @@ impl Value {
     pub fn to_vec(&self) -> Vec<Value> {
         match self {
             Value::Array(s) => Getter::from_str(s).to_vec(),
-            Value::Null | Value::NotExist => vec![],
+            Value::Null => vec![],
             _ => vec![self.clone()],
         }
     }

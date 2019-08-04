@@ -44,11 +44,11 @@ impl ParserValue {
         }
     }
 
-    pub fn vector_to_value(self) -> Value {
+    pub fn vector_to_value(self) -> Option<Value> {
         if let ParserValue::ArrayString(s) = self {
-            Value::Array(s)
+            Some(Value::Array(s))
         } else {
-            Value::NotExist
+            None
         }
     }
 }
@@ -79,14 +79,14 @@ impl<R> Getter<R>
 where
     R: reader::ByteReader,
 {
-    pub fn get(&mut self, path: &str) -> Value {
+    pub fn get(&mut self, path: &str) -> Option<Value> {
         let v = path.as_bytes();
         self.get_by_utf8(&v)
     }
 
-    pub fn get_by_utf8(&mut self, v: &[u8]) -> Value {
+    pub fn get_by_utf8(&mut self, v: &[u8]) -> Option<Value> {
         if v.len() == 0 {
-            return Value::NotExist;
+            return None
         }
 
         // reset offset
@@ -124,7 +124,7 @@ where
                                     _ => panic!("invalid map key"),
                                 };
                             } else {
-                                m.insert(key_cache.take().unwrap(), self.parse_value(v));
+                                m.insert(key_cache.take().unwrap(), self.parse_value(v).unwrap());
                             }
                             continue;
                         }
@@ -149,7 +149,7 @@ where
                     loop {
                         let v = self.read_next_parse_value();
                         if v.exists() {
-                            arr.push(self.parse_value(v));
+                            arr.push(self.parse_value(v).unwrap());
                             continue;
                         }
                         break 'outer;
@@ -248,16 +248,18 @@ where
         };
     }
 
-    fn parse_value(&self, v: ParserValue) -> Value {
-        match v {
+    fn parse_value(&self, v: ParserValue) -> Option<Value> {
+        let val = match v {
             ParserValue::ArrayString(s) => Value::Array(s),
             ParserValue::ObjectString(s) => Value::Object(s),
-            _ => self.parse_value_borrow(&v),
-        }
+            _ => return self.parse_value_borrow(&v),
+        };
+
+        Some(val)
     }
 
-    fn parse_value_borrow(&self, v: &ParserValue) -> Value {
-        match *v {
+    fn parse_value_borrow(&self, v: &ParserValue) -> Option<Value> {
+        let val = match *v {
             ParserValue::String(start, end) => {
                 let s = unescape::unescape(self.bytes_slice(start + 1, end - 1));
                 // let s = String::from_utf8_lossy(self.bytes_slice(start + 1, end - 1)).to_string();
@@ -285,8 +287,10 @@ where
             ParserValue::NumberUsize(u) => Value::Number(Number::U64(u.to_string())),
             ParserValue::Boolean(bool) => Value::Boolean(bool),
             ParserValue::Null => Value::Null,
-            _ => Value::NotExist,
-        }
+            _ => return None,
+        };
+
+        Some(val)
     }
 
     fn select_to_object(&mut self, sels: &[SubSelector]) -> ParserValue {
@@ -400,7 +404,7 @@ where
         }
     }
 
-    pub fn next_value(&mut self) -> Value {
+    pub fn next_value(&mut self) -> Option<Value> {
         let pv = self.read_next_parse_value();
         self.parse_value(pv)
     }
@@ -554,7 +558,11 @@ where
                     false => self.parse_value_borrow(&v),
                 };
 
-                if !query.is_match(&value_to_match) {
+                if value_to_match.is_none() {
+                    continue;
+                }
+
+                if !query.is_match(value_to_match.as_ref().unwrap()) {
                     continue;
                 }
             }

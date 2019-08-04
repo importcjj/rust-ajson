@@ -64,7 +64,7 @@ static BENCH_DATA: &'static str = r#"{
 // }
 
 fn ajson_selector(json: &str) {
-    ajson::get(json, "widget.[image.src,text.data]").to_vec();
+    ajson::get(json, "widget.[image.src,text.data]").unwrap().to_vec();
 }
 
 fn ajson_multi_query(json: &str) {
@@ -75,12 +75,12 @@ fn ajson_multi_query(json: &str) {
 }
 
 fn ajson_bench(json: &str) {
-    ajson::get(json, "widget.window.name").as_str();
-    ajson::get(json, "widget.image.hOffset").to_f64();
-    ajson::get(json, "widget.text.onMouseUp").as_str();
-    ajson::get(json, "widget.debug").as_str();
+    ajson::get(json, "widget.window.name").unwrap().as_str();
+    ajson::get(json, "widget.image.hOffset").unwrap().to_f64();
+    ajson::get(json, "widget.text.onMouseUp").unwrap().as_str();
+    ajson::get(json, "widget.debug").unwrap().as_str();
     // ajson::get(json, "widget.text").to_object();
-    ajson::get(json, "widget.menu.#(sub_item>7)#.title").to_vec();
+    ajson::get(json, "widget.menu.#(sub_item>7)#.title").unwrap().to_vec();
     // ajson::get(json, "widget.menu.[1.title,2.options]").to_vec();
 }
 

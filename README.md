@@ -54,7 +54,7 @@ let data = r#"
 }
 "#;
 
-let name = ajson::get(data, "project.name");
+let name = ajson::get(data, "project.name").unwrap();
 println!("{}", name.as_str()); // ajson
 ```
 
@@ -130,9 +130,9 @@ Basically, you can use selectors to assemble whatever you want, and of course, t
 ```
 
 ```rust
-ajson::get(json, "name.[first,last]").to_vec();
-ajson::get(json, "name.first"); 
-ajson::get(json, "name.last");
+ajson::get(json, "name.[first,last]").unwrap().to_vec();
+ajson::get(json, "name.first").unwrap(); 
+ajson::get(json, "name.last").unwrap();
 ```
 
 ## Value
@@ -146,13 +146,13 @@ enum Value {
     Array(String),
     Boolean(bool),
     Null,
-    NotExist,
 }
 ```
 
 Value has a number of methods that meet your different needs.
 
 ```rust
+value.get(&str) -> Option<Value>
 value.as_str() -> &str
 value.to_u64() -> u64
 value.to_i64() -> i64
@@ -160,12 +160,10 @@ value.to_f64() -> f64
 value.to_bool() -> bool
 value.to_vec() -> Vec<Value>
 value.to_object() -> HashMap<String, Value>
-value.get(&str) -> Value
 ```
 
 
 ```rust
-value.exists() -> bool
 value.is_number() -> bool
 value.is_string() -> bool
 value.is_bool() -> bool
@@ -174,15 +172,6 @@ value.is_array() -> bool
 value.is_null() -> bool
 ```
 
-Sometimes you need to check if value exists, you can use `exists()`. Notice that when used for `null` values, exists returns `true`.
-
-```rust
-
-let v = ajson::get(json, "path");
-if v.exist() {
-  println!("got it {}", value);
-}
-```
 
 ## get or parse?
 
@@ -196,8 +185,8 @@ Not only string, AJSON also can parse JSON from io::Read.
 use std::fs::File;
 
 let f = file::Open("path/to/json").unwrap();
-let json = ajson::parse_from_read(f);
-let value = json.get("a.b");
+let json = ajson::parse_from_read(f).unwrap();
+let value = json.get("a.b").unwrap();
 println!("{}", value.as_str());
 ```
 
