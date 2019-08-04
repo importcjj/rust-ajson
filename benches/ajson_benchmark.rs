@@ -111,12 +111,11 @@ fn json_rust_bench(data: &str) {
     // let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
 
     let menu = &json::parse(data).unwrap()["widget"]["menu"];
-    let _v: Vec<&JsonValue> = black_box(
-        menu.members()
-            .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
-            .map(|x| &x["title"])
-            .collect(),
-    );
+    let _v: Vec<&JsonValue> = black_box(menu
+        .members()
+        .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
+        .map(|x| &x["title"])
+        .collect());
 }
 
 fn serde_json_bench(json: &str) {
