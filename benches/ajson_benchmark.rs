@@ -1,3 +1,8 @@
+// extern crate jemallocator;
+
+// #[global_allocator]
+// static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 #[macro_use]
 extern crate criterion;
 
@@ -70,10 +75,7 @@ static BENCH_DATA: &'static str = r#"{
 // }
 
 fn ajson_selector(json: &str) {
-    black_box(
-        ajson::get(json, "widget.[image.src,text.data]")
-            .unwrap()
-    );
+    black_box(ajson::get(json, "widget.[image.src,text.data]").unwrap());
 }
 
 fn ajson_multi_query(json: &str) {
@@ -88,32 +90,28 @@ fn ajson_bench(json: &str) {
     black_box(ajson::get(json, "widget.image.hOffset").unwrap().to_f64());
     black_box(ajson::get(json, "widget.text.onMouseUp").unwrap().as_str());
     black_box(ajson::get(json, "widget.debug").unwrap().as_str());
-    // ajson::get(json, "widget.text").as_map();
-    black_box(
-        ajson::get(json, "widget.menu.#(sub_item>7)#.title")
-            .unwrap()
-    );
-    // ajson::get(json, "widget.menu.[1.title,2.options]").as_array();
+    black_box(ajson::get(json, "widget.menu.#(sub_item>7)#.title").unwrap());
 }
 
 fn json_rust_bench(data: &str) {
     let a = &json::parse(data).unwrap();
-    black_box(a["widget"]["window"]["name"].as_str().unwrap());
-    let b = &json::parse(data).unwrap();
-    black_box(b["widget"]["image"]["hOffset"].as_i64().unwrap());
-    let c = &json::parse(data).unwrap();
-    black_box(c["widget"]["text"]["onMouseUp"].as_str().unwrap());
-    let d = &json::parse(data).unwrap();
-    black_box(d["widget"]["debug"].as_str().unwrap());
+    black_box(&a["widget"]["window"]["name"].as_str().unwrap());
+    // let b = &json::parse(data).unwrap();
+    black_box(&a["widget"]["image"]["hOffset"].as_i64().unwrap());
+    // let c = &json::parse(data).unwrap();
+    black_box(&a["widget"]["text"]["onMouseUp"].as_str().unwrap());
+    // let d = &json::parse(data).unwrap();
+    black_box(&a["widget"]["debug"].as_str().unwrap());
 
     // let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
 
-    let menu = &json::parse(data).unwrap()["widget"]["menu"];
-    let _v: Vec<&JsonValue> = black_box(menu
-        .members()
-        .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
-        .map(|x| &x["title"])
-        .collect());
+    let menu = &a["widget"]["menu"];
+    let _v: Vec<&JsonValue> = black_box(
+        menu.members()
+            .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
+            .map(|x| &x["title"])
+            .collect(),
+    );
 }
 
 fn serde_json_bench(json: &str) {
@@ -238,6 +236,10 @@ fn serde_json_derive_bench(json: &str) {
 fn nom_json_bench(json: &str) {
     match nom_json::root::<(&str, ErrorKind)>(json) {
         Ok((_, value)) => {
+            // println!("{}", &value["widget"]["window"]["name"].as_str());
+            // println!("{:?}", &value["widget"]["image"]["hOffset"]);
+            // println!("{}", &value["widget"]["text"]["onMouseUp"].as_str());
+            // println!("{}", &value["widget"]["debug"].as_str());
             black_box(&value["widget"]["window"]["name"].as_str());
             black_box(&value["widget"]["image"]["hOffset"]);
             black_box(&value["widget"]["text"]["onMouseUp"].as_str());
@@ -251,7 +253,7 @@ fn nom_json_bench(json: &str) {
                     .collect(),
             );
         }
-        _ => (),
+        _ => panic!("invalid json"),
     };
 }
 
@@ -279,7 +281,6 @@ fn serde_json_derive_multi_query(json: &str) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    // c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
     c.bench_function("ajson benchmark", |b| {
         b.iter(|| ajson_bench(black_box(BENCH_DATA)))
     });

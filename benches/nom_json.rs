@@ -2,15 +2,12 @@
 
 extern crate nom;
 use std::ops::Index;
-// extern crate jemallocator;
 
-// #[global_allocator]
-// static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 use nom::{
   branch::alt,
   bytes::complete::{escaped, tag, take_while},
-  character::complete::{alphanumeric1 as alphanumeric, char, one_of},
+  character::complete::{alphanumeric1 as alphanumeric, char, none_of, one_of},
   combinator::{map, opt, cut},
   error::{context, convert_error, ErrorKind, ParseError,VerboseError},
   multi::separated_list,
@@ -101,7 +98,7 @@ fn sp<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
 /// of the input data. and there is no allocation needed. This is the main idea
 /// behind nom's performance.
 fn parse_str<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-  escaped(alphanumeric, '\\', one_of("\"n\\"))(i)
+  escaped(none_of("\""), '\\', one_of("\"n\\"))(i)
 }
 
 /// `tag(string)` generates a parser that recognizes the argument string.
