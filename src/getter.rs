@@ -19,37 +19,21 @@ where
 #[derive(PartialEq, Debug)]
 enum ParserValue {
     String(usize, usize),
-    Object(usize, usize),
-    Array(usize, usize),
+    ObjectMark(usize, usize),
+    ArrayMark(usize, usize),
     Null,
     Boolean(bool),
     Number(usize, usize),
     NumberUsize(usize),
     NotExist,
 
-    ArrayString(String),
-    ObjectString(String),
+    Array(Vec<Value>),
+    Object(HashMap<String, Value>),
 }
 
 impl ParserValue {
     pub fn exists(&self) -> bool {
         *self != ParserValue::NotExist
-    }
-
-    pub fn is_vector(&self) -> bool {
-        if let ParserValue::ArrayString(_) = *self {
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn vector_to_value(self) -> Option<Value> {
-        if let ParserValue::ArrayString(s) = self {
-            Some(Value::Array(s))
-        } else {
-            None
-        }
     }
 }
 
@@ -86,18 +70,13 @@ where
 
     pub fn get_by_utf8(&mut self, v: &[u8]) -> Option<Value> {
         if v.len() == 0 {
-            return None
+            return None;
         }
 
         // reset offset
         self.seek(0);
         let path = Path::new_from_utf8(v);
-        let pv = self.get_by_path(&path);
-        if pv.is_vector() {
-            pv.vector_to_value()
-        } else {
-            self.parse_value(pv)
-        }
+        self.get_by_path(&path)
     }
 
     pub fn to_object(&mut self) -> HashMap<String, Value> {
@@ -189,69 +168,69 @@ where
         self.source.slice(start, end)
     }
 
-    #[allow(dead_code)]
-    fn value_to_raw_str<'b>(&'b mut self, v: &'b ParserValue) -> &'b str {
-        match *v {
-            ParserValue::String(start, end)
-            | ParserValue::Object(start, end)
-            | ParserValue::Array(start, end)
-            | ParserValue::Number(start, end) => {
-                str::from_utf8(self.bytes_slice(start, end)).unwrap()
-            }
-            ParserValue::ArrayString(ref s) => s,
-            ParserValue::Boolean(true) => "true",
-            ParserValue::Boolean(false) => "false",
-            // ParserValue::NumberUsize(u) => &u.to_string(),
-            ParserValue::Null => "null",
-            _ => "",
-        }
-    }
+    // #[allow(dead_code)]
+    // fn value_to_raw_str<'b>(&'b mut self, v: &'b ParserValue) -> &'b str {
+    //     match *v {
+    //         ParserValue::String(start, end)
+    //         | ParserValue::Object(start, end)
+    //         | ParserValue::Array(start, end)
+    //         | ParserValue::Number(start, end) => {
+    //             str::from_utf8(self.bytes_slice(start, end)).unwrap()
+    //         }
+    //         ParserValue::ArrayString(ref s) => s,
+    //         ParserValue::Boolean(true) => "true",
+    //         ParserValue::Boolean(false) => "false",
+    //         // ParserValue::NumberUsize(u) => &u.to_string(),
+    //         ParserValue::Null => "null",
+    //         _ => "",
+    //     }
+    // }
 
-    fn write_to_bytes_buffer(&self, v: &mut Vec<u8>, pv: &ParserValue) {
-        match *pv {
-            ParserValue::String(start, end)
-            | ParserValue::Object(start, end)
-            | ParserValue::Array(start, end)
-            | ParserValue::Number(start, end) => v.extend(self.bytes_slice(start, end)),
+    // fn write_to_bytes_buffer(&self, v: &mut Vec<u8>, pv: &ParserValue) {
+    //     match *pv {
+    //         ParserValue::String(start, end)
+    //         | ParserValue::Object(start, end)
+    //         | ParserValue::Array(start, end)
+    //         | ParserValue::Number(start, end) => v.extend(self.bytes_slice(start, end)),
 
-            ParserValue::ArrayString(ref s) | ParserValue::ObjectString(ref s) => {
-                v.extend(s.as_bytes())
-            }
+    //         ParserValue::ArrayString(ref s) | ParserValue::ObjectString(ref s) => {
+    //             v.extend(s.as_bytes())
+    //         }
 
-            ParserValue::Boolean(true) => v.extend("true".as_bytes()),
-            ParserValue::Boolean(false) => v.extend("false".as_bytes()),
-            ParserValue::NumberUsize(ref u) => v.extend(u.to_string().as_bytes()),
-            ParserValue::Null => v.extend("null".as_bytes()),
-            _ => (),
-        };
-    }
+    //         ParserValue::Boolean(true) => v.extend("true".as_bytes()),
+    //         ParserValue::Boolean(false) => v.extend("false".as_bytes()),
+    //         ParserValue::NumberUsize(ref u) => v.extend(u.to_string().as_bytes()),
+    //         ParserValue::Null => v.extend("null".as_bytes()),
+    //         _ => (),
+    //     };
+    // }
 
-    fn write_to_string_buffer<'b>(&'b mut self, buffer: &mut String, v: &'b ParserValue) {
-        match *v {
-            ParserValue::String(start, end)
-            | ParserValue::Object(start, end)
-            | ParserValue::Array(start, end)
-            | ParserValue::Number(start, end) => {
-                let s = str::from_utf8(self.bytes_slice(start, end)).unwrap();
-                buffer.push_str(s)
-            }
+    // fn write_to_string_buffer<'b>(&'b mut self, buffer: &mut String, v: &'b ParserValue) {
+    //     match *v {
+    //         ParserValue::String(start, end)
+    //         | ParserValue::Object(start, end)
+    //         | ParserValue::Array(start, end)
+    //         | ParserValue::Number(start, end) => {
+    //             let s = str::from_utf8(self.bytes_slice(start, end)).unwrap();
+    //             buffer.push_str(s)
+    //         }
 
-            ParserValue::ArrayString(ref s) | ParserValue::ObjectString(ref s) => {
-                buffer.push_str(s)
-            }
+    //         ParserValue::ArrayString(ref s) | ParserValue::ObjectString(ref s) => {
+    //             buffer.push_str(s)
+    //         }
 
-            ParserValue::Boolean(true) => buffer.push_str("true"),
-            ParserValue::Boolean(false) => buffer.push_str("false"),
-            ParserValue::NumberUsize(ref u) => buffer.push_str(&u.to_string()),
-            ParserValue::Null => buffer.push_str("null"),
-            _ => buffer.push_str(""),
-        };
-    }
+    //         ParserValue::Boolean(true) => buffer.push_str("true"),
+    //         ParserValue::Boolean(false) => buffer.push_str("false"),
+    //         ParserValue::NumberUsize(ref u) => buffer.push_str(&u.to_string()),
+    //         ParserValue::Null => buffer.push_str("null"),
+    //         _ => buffer.push_str(""),
+    //     };
+    // }
 
     fn parse_value(&self, v: ParserValue) -> Option<Value> {
         let val = match v {
-            ParserValue::ArrayString(s) => Value::Array(s),
-            ParserValue::ObjectString(s) => Value::Object(s),
+            ParserValue::Array(s) => Value::Array(s),
+            ParserValue::Object(s) => Value::Object(s),
             _ => return self.parse_value_borrow(&v),
         };
 
@@ -265,16 +244,7 @@ where
                 // let s = String::from_utf8_lossy(self.bytes_slice(start + 1, end - 1)).to_string();
                 Value::String(s)
             }
-            ParserValue::Object(start, end) => {
-                let s = String::from_utf8_lossy(self.bytes_slice(start, end)).to_string();
-                Value::Object(s)
-            }
-            ParserValue::Array(start, end) => {
-                let s = String::from_utf8_lossy(self.bytes_slice(start, end)).to_string();
-                Value::Array(s)
-            }
-
-            ParserValue::ArrayString(_) | ParserValue::ObjectString(_) => {
+            ParserValue::Object(_) | ParserValue::Array(_) => {
                 panic!("should not borrow string value")
             }
 
@@ -293,61 +263,45 @@ where
         Some(val)
     }
 
-    fn select_to_object(&mut self, sels: &[SubSelector]) -> ParserValue {
-        let mut raw = Vec::with_capacity(100);
+    fn select_to_object(&mut self, sels: &[SubSelector]) -> Option<Value> {
+        let mut object = HashMap::with_capacity(sels.len());
         let start = self.position();
-        raw.push(b'{');
 
         for sel in sels {
             let path = Path::new_from_utf8(sel.path);
             self.seek(start);
             let sub_pv = self.get_by_path(&path);
-            if sub_pv.exists() {
-                raw.push(b'"');
-                raw.extend(sel.name);
-                raw.push(b'"');
-                raw.push(b':');
-                self.write_to_bytes_buffer(&mut raw, &sub_pv);
-                raw.push(b',');
+            if sub_pv.is_some() {
+                object.insert(
+                    String::from_utf8_lossy(sel.path).to_string(),
+                    sub_pv.unwrap(),
+                );
             }
         }
 
-        if raw.len() > 1 {
-            raw.pop();
-        }
-        raw.push(b'}');
 
-        let s = String::from_utf8_lossy(&raw).to_string();
-        ParserValue::ObjectString(s)
+        Some(Value::Object(object))
     }
 
-    fn select_to_array(&mut self, sels: &[SubSelector]) -> ParserValue {
-        let mut raw = Vec::with_capacity(100);
+    fn select_to_array(&mut self, sels: &[SubSelector]) -> Option<Value> {
+        let mut array = Vec::with_capacity(100);
         let start = self.position();
-        raw.push(b'[');
 
         for sel in sels {
             let path = Path::new_from_utf8(sel.path);
             self.seek(start);
             let sub_pv = self.get_by_path(&path);
-            if sub_pv.exists() {
-                self.write_to_bytes_buffer(&mut raw, &sub_pv);
-                raw.push(b',');
+            if sub_pv.is_some() {
+                array.push(sub_pv.unwrap());
             }
         }
 
-        if raw.len() > 1 {
-            raw.pop();
-        }
-        raw.push(b']');
-
-        let s = String::from_utf8_lossy(&raw).to_string();
-        ParserValue::ArrayString(s)
+        Some(Value::Array(array))
     }
 
-    fn get_by_path(&mut self, path: &Path) -> ParserValue {
+    fn get_by_path(&mut self, path: &Path) -> Option<Value> {
         if !path.ok {
-            return ParserValue::NotExist;
+            return None;
         }
 
         if path.has_selectors() {
@@ -356,11 +310,7 @@ where
                 false => self.select_to_object(path.borrow_selectors()),
             };
 
-            return if path.more {
-                self.get_from_value(&v, path.borrow_next())
-            } else {
-                v
-            };
+            return v;
         }
 
         while let Some(b) = self.peek() {
@@ -380,33 +330,81 @@ where
             };
         }
 
-        ParserValue::NotExist
+        None
     }
 
-    fn get_from_value(&mut self, value: &ParserValue, path: &Path) -> ParserValue {
+    fn get_from_value(&mut self, value: &ParserValue, path: &Path) -> Option<Value> {
         if !path.ok {
-            return ParserValue::NotExist;
+            return None;
         }
 
         match value {
-            ParserValue::Array(start, _) | ParserValue::Object(start, _) => {
+            ParserValue::ArrayMark(start, _) | ParserValue::ObjectMark(start, _) => {
                 let old = self.position();
                 self.seek(*start);
                 let v = self.get_by_path(path);
                 self.seek(old);
                 v
             }
-            ParserValue::ArrayString(ref s) | ParserValue::ObjectString(ref s) => {
-                let mut getter = Getter::from_str(s);
-                getter.get_by_path(path)
-            }
-            _ => ParserValue::NotExist,
+            _ => None,
         }
     }
 
     pub fn next_value(&mut self) -> Option<Value> {
         let pv = self.read_next_parse_value();
         self.parse_value(pv)
+    }
+
+    fn parse_next_value(&mut self) -> Option<Value> {
+        while let Some(b) = self.peek() {
+            let v = match b {
+                b'"' => self.read_str_value(),
+                b't' | b'f' => self.read_boolean_value(),
+                b'n' => self.read_null_value(),
+                b'{' => {
+                    let mut object = HashMap::new();
+                    self.next_byte();
+
+                    loop {
+                        let key = self.read_next_parse_value();
+                        match key {
+                            ParserValue::String(start, end) => {
+                                let s = unescape::unescape(self.bytes_slice(start + 1, end - 1));
+                                println!("{}", s);
+                                let v = self.parse_next_value().unwrap();
+                                object.insert(s, v);
+                            }
+                            _ => break
+                        }
+                    }
+
+                    return Some(Value::Object(object));
+                }
+                b'[' => {
+                    let mut array = Vec::new();
+                    self.next_byte();
+                    while let Some(k) = self.parse_next_value() {
+                        array.push(k);
+                    }
+
+                    return Some(Value::Array(array));
+                }
+                b'0'...b'9' | b'-' | b'.' => self.read_number_value(),
+                b'}' | b']' => {
+                    self.next_byte();
+                    return None;
+                }
+                _ => {
+                    self.next_byte();
+                    continue;
+                }
+            };
+
+            // println!("read value {:?}", self.parse_value(v));
+            return self.parse_value(v);
+        }
+
+        None
     }
 
     fn read_next_parse_value(&mut self) -> ParserValue {
@@ -417,7 +415,10 @@ where
                 b'n' => self.read_null_value(),
                 b'{' | b'[' => self.read_json_value(),
                 b'0'...b'9' | b'-' | b'.' => self.read_number_value(),
-                b'}' | b']' => ParserValue::NotExist,
+                b'}' | b']' => {
+                    self.next_byte();
+                    ParserValue::NotExist
+                },
                 _ => {
                     self.next_byte();
                     continue;
@@ -462,9 +463,9 @@ where
         let (start, end) = self.source.read_json_value();
 
         if is_object {
-            ParserValue::Object(start, end)
+            ParserValue::ObjectMark(start, end)
         } else {
-            ParserValue::Array(start, end)
+            ParserValue::ArrayMark(start, end)
         }
     }
 
@@ -478,17 +479,12 @@ where
         ParserValue::Number(start, end)
     }
 
-    fn get_from_object(&mut self, path: &Path) -> ParserValue {
-        // println!(
-        //     "get object by path {:?}",
-        //     str::from_utf8(path.part).unwrap()
-        // );
-
+    fn get_from_object(&mut self, path: &Path) -> Option<Value> {
         let mut count = 0;
         loop {
             let v = self.read_next_parse_value();
             if v == ParserValue::NotExist {
-                return v;
+                return None;
             }
 
             count += 1;
@@ -502,7 +498,7 @@ where
                     return if path.more {
                         self.get_by_path(path.borrow_next())
                     } else {
-                        self.read_next_parse_value()
+                        self.parse_next_value()
                     };
                 }
             } else {
@@ -511,7 +507,7 @@ where
         }
     }
 
-    fn get_from_array(&mut self, path: &Path) -> ParserValue {
+    fn get_from_array(&mut self, path: &Path) -> Option<Value> {
         // println!("get array by path {:?}", path);
 
         let mut count = 0;
@@ -525,36 +521,38 @@ where
 
         // println!("path =====> {:?}", path);
         // println!("=> query {:?} {}", query, query.has_path());
-        let mut vector_str = String::new();
+        let mut array = Vec::new();
         let return_vector = (query.on && query.all) || (!query.on && path.more);
         let return_first = query.on && !query.all;
-        if return_vector {
-            vector_str = String::with_capacity(100);
-            vector_str.push('[');
-        }
+
 
         loop {
-            if idx_get && idx == count {
-                if path.more {
-                    return self.get_by_path(path.borrow_next());
+            if idx_get {
+                if idx == count {
+                    if path.more {
+                        return self.get_by_path(path.borrow_next());
+                    }
+                    return self.parse_next_value();
                 }
-                return self.read_next_parse_value();
             }
 
-            let mut v = self.read_next_parse_value();
+            let v = self.read_next_parse_value();
             if !v.exists() {
                 break;
             }
+
+            count += 1;
+            if idx_get {
+                continue;
+            }
+
 
             // do query match
             // println!("{:?}", self.value_to_raw_str(&v));
             // println!("more {}", path.more);
             if query.on {
                 let value_to_match = match query.has_path() {
-                    true => {
-                        let v = self.get_from_value(&v, &query_key);
-                        self.parse_value_borrow(&v)
-                    }
+                    true => self.get_from_value(&v, &query_key),
                     false => self.parse_value_borrow(&v),
                 };
 
@@ -567,38 +565,35 @@ where
                 }
             }
 
-            count += 1;
 
+            let val: Option<Value>;
             if path.more {
-                v = self.get_from_value(&v, path.borrow_next());
-                if !v.exists() {
+                val = self.get_from_value(&v, path.borrow_next());
+                if val.is_none() {
                     continue;
                 }
+            } else {
+                val = self.parse_value(v)
             }
 
             if return_first {
-                return v;
+                return val;
             }
 
             if return_vector {
-                self.write_to_string_buffer(&mut vector_str, &v);
-                vector_str.push(',');
+                array.push(val.unwrap())
             }
         }
 
         if return_vector {
-            if vector_str.len() > 1 {
-                // remove last comma
-                vector_str.pop();
-            }
-            vector_str.push(']');
-            ParserValue::ArrayString(vector_str)
+            Some(Value::Array(array))
         } else if return_first {
-            ParserValue::NotExist
+            None
         } else if path.arrch {
-            ParserValue::NumberUsize(count)
+            let n = Number::I64(count.to_string());
+            Some(Value::Number(n))
         } else {
-            ParserValue::NotExist
+            None
         }
     }
 }

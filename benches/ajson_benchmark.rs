@@ -73,7 +73,6 @@ fn ajson_selector(json: &str) {
     black_box(
         ajson::get(json, "widget.[image.src,text.data]")
             .unwrap()
-            .to_vec(),
     );
 }
 
@@ -93,7 +92,6 @@ fn ajson_bench(json: &str) {
     black_box(
         ajson::get(json, "widget.menu.#(sub_item>7)#.title")
             .unwrap()
-            .to_vec(),
     );
     // ajson::get(json, "widget.menu.[1.title,2.options]").as_array();
 }

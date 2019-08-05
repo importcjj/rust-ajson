@@ -4,21 +4,26 @@ use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
 use std::str;
+use std::ops::Index;
 
 #[derive(PartialEq, Clone)]
 pub enum Value {
     String(String),
     Number(Number),
-    Object(String),
-    Array(String),
+    Object(HashMap<String, Value>),
+    Array(Vec<Value>),
     Boolean(bool),
     Null,
 }
+
+static NULL: Value = Value::Null;
 
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::String(_) => write!(f, r#""{}""#, self.as_str()),
+            Value::Object(m) => write!(f, "{:?}", m),
+            Value::Array(a) => write!(f, "{:?}", a),
             _ => write!(f, "{}", self.as_str()),
         }
     }
@@ -37,8 +42,19 @@ impl Value {
 
     pub fn get_by_utf8(&self, v: &[u8]) -> Option<Value> {
         match self {
-            Value::Array(s) | Value::Object(s) => Getter::from_str(s).get_by_utf8(v),
+            // Value::Array(s) | Value::Object(s) => Getter::from_str(s).get_by_utf8(v),
             _ => None,
+        }
+    }
+}
+
+impl<'a> Index<&'a str> for Value {
+    type Output = Value;
+
+    fn index(&self, index: &str) -> &Value {
+        match *self {
+            Value::Object(ref object) => &object[index],
+            _ => &NULL
         }
     }
 }
@@ -95,8 +111,8 @@ impl Value {
             Value::Number(number) => number.as_str(),
             Value::Boolean(true) => "true",
             Value::Boolean(false) => "false",
-            Value::Object(ref s) => s,
-            Value::Array(ref s) => s,
+            Value::Object(ref s) => "",
+            Value::Array(ref s) => "",
             Value::Null => "null",
         }
     }
@@ -132,21 +148,6 @@ impl Value {
         match *self {
             Value::Boolean(b) => b,
             _ => false,
-        }
-    }
-
-    pub fn to_vec(&self) -> Vec<Value> {
-        match self {
-            Value::Array(s) => Getter::from_str(s).to_vec(),
-            Value::Null => vec![],
-            _ => vec![self.clone()],
-        }
-    }
-
-    pub fn to_object(&self) -> HashMap<String, Value> {
-        match self {
-            Value::Object(s) => Getter::from_str(s).to_object(),
-            _ => HashMap::new(),
         }
     }
 }
