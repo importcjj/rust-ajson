@@ -78,10 +78,9 @@ fn ajson_selector(json: &str) {
 }
 
 fn ajson_multi_query(json: &str) {
-    black_box([
-        ajson::get(json, "widget.image.src"),
-        ajson::get(json, "widget.text.data"),
-    ]);
+    black_box(ajson::get(json, "widget"),
+        // ajson::get(json, "widget.text.data"),
+    );
 }
 
 fn ajson_bench(json: &str) {
@@ -111,11 +110,12 @@ fn json_rust_bench(data: &str) {
     // let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
 
     let menu = &json::parse(data).unwrap()["widget"]["menu"];
-    let _v: Vec<&JsonValue> = black_box(menu
-        .members()
-        .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
-        .map(|x| &x["title"])
-        .collect());
+    let _v: Vec<&JsonValue> = black_box(
+        menu.members()
+            .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
+            .map(|x| &x["title"])
+            .collect(),
+    );
 }
 
 fn serde_json_bench(json: &str) {
@@ -257,54 +257,76 @@ fn nom_json_bench(json: &str) {
     };
 }
 
-fn serde_json_derive_multi_query(json: &str) {
-    #[derive(Deserialize)]
-    struct Main {
-        widget: Widget,
-    }
-    #[derive(Deserialize)]
-    struct Widget {
-        image: Image,
-        text: Text,
-    }
-    #[derive(Deserialize)]
-    struct Image {
-        src: Value,
-    }
-    #[derive(Deserialize)]
-    struct Text {
-        data: Value,
-    }
+#[derive(Deserialize)]
+struct Main {
+    widget: Widget,
+}
+#[derive(Deserialize)]
+struct Widget {
+    image: Image,
+    text: Text,
+}
+#[derive(Deserialize)]
+struct Image {
+    src: Value,
+}
+#[derive(Deserialize)]
+struct Text {
+    data: Value,
+}
 
+
+fn serde_json_derive_multi_query(json: &str) {
     let a = serde_json::from_str::<Main>(json).unwrap();
     black_box([a.widget.image.src, a.widget.text.data]);
 }
 
+fn ajson_path_group() {
+    use ajson::group;
+
+    let mut g = group::PathGroup::new();
+    let pathes = vec![
+        "widget.window.name",
+        "widget.image.hOffset",
+        "widget.text.onMouseUp",
+        "widget.debug",
+        "widget.menu.#(sub_item>7)#.title",
+    ];
+
+    for (i, s) in pathes.iter().enumerate() {
+        let path = ajson::Path::new_from_utf8(s.as_bytes());
+        g.push_path(i, path);
+    }
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     // c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
-    c.bench_function("ajson benchmark", |b| {
-        b.iter(|| ajson_bench(black_box(BENCH_DATA)))
-    });
-    c.bench_function("serde_json benchmark", |b| {
-        b.iter(|| serde_json_bench(black_box(BENCH_DATA)))
-    });
-    c.bench_function("json-rust benchmark", |b| {
-        b.iter(|| json_rust_bench(black_box(BENCH_DATA)))
-    });
-    c.bench_function("ajson selector", |b| {
-        b.iter(|| ajson_selector(black_box(BENCH_DATA)))
-    });
-    c.bench_function("ajson multi query", |b| {
-        b.iter(|| ajson_multi_query(black_box(BENCH_DATA)))
-    });
-    c.bench_function("serde derive", |b| {
-        b.iter(|| serde_json_derive_bench(black_box(BENCH_DATA)))
-    });
-    c.bench_function("serde derive multi query", |b| {
-        b.iter(|| serde_json_derive_multi_query(black_box(BENCH_DATA)))
-    });
-    c.bench_function("nom json bench", |b| {
-        b.iter(|| nom_json_bench(black_box(BENCH_DATA)))
+    // c.bench_function("ajson benchmark", |b| {
+    //     b.iter(|| ajson_bench(black_box(BENCH_DATA)))
+    // });
+    // c.bench_function("serde_json benchmark", |b| {
+    //     b.iter(|| serde_json_bench(black_box(BENCH_DATA)))
+    // });
+    // c.bench_function("json-rust benchmark", |b| {
+    //     b.iter(|| json_rust_bench(black_box(BENCH_DATA)))
+    // });
+    // c.bench_function("ajson selector", |b| {
+    //     b.iter(|| ajson_selector(black_box(BENCH_DATA)))
+    // });
+    // c.bench_function("ajson multi query", |b| {
+    //     b.iter(|| ajson_multi_query(black_box(BENCH_DATA)))
+    // });
+    // c.bench_function("serde derive", |b| {
+    //     b.iter(|| serde_json_derive_bench(black_box(BENCH_DATA)))
+    // });
+    // c.bench_function("serde derive multi query", |b| {
+    //     b.iter(|| serde_json_derive_multi_query(black_box(BENCH_DATA)))
+    // });
+    // c.bench_function("nom json bench", |b| {
+    //     b.iter(|| nom_json_bench(black_box(BENCH_DATA)))
+    // });
+    c.bench_function("ajson_path_group", |b| {
+        b.iter(|| ajson_path_group())
     });
 }
 

@@ -117,6 +117,13 @@ impl<'a> Path<'a> {
         }
     }
 
+    pub fn take_next<'b>(&mut self) -> Path<'b> {
+        match self.next {
+            Some(_) => Path::empty(),
+            None => panic!("error")
+        }
+    }
+
     pub fn set_wild(&mut self, b: bool) {
         self.wild = b;
     }
