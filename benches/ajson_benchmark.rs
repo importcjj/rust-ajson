@@ -78,7 +78,8 @@ fn ajson_selector(json: &str) {
 }
 
 fn ajson_multi_query(json: &str) {
-    black_box(ajson::get(json, "widget"),
+    black_box(
+        ajson::get(json, "widget"),
         // ajson::get(json, "widget.text.data"),
     );
 }
@@ -299,6 +300,36 @@ fn ajson_path_group() {
     }
 }
 
+fn ajson_parse_path() {
+
+    let pathes = vec![
+        "widget.window.name",
+        "widget.image.hOffset",
+        "widget.text.onMouseUp",
+        "widget.debug",
+        "widget.menu.#(sub_item>7)#.title",
+    ];
+
+    for (_i, s) in pathes.iter().enumerate() {
+        ajson::Path::new_from_utf8(s.as_bytes());
+    }
+}
+
+fn ajson_parse_path_v2() {
+    use ajson::path_v2;
+    let pathes = vec![
+        "widget.window.name",
+        "widget.image.hOffset",
+        "widget.text.onMouseUp",
+        "widget.debug",
+        "widget.menu.#(sub_item>7)#.title",
+    ];
+
+    for s in pathes {
+        path_v2::parse(s);
+    }
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     // c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
     // c.bench_function("ajson benchmark", |b| {
@@ -325,9 +356,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     // c.bench_function("nom json bench", |b| {
     //     b.iter(|| nom_json_bench(black_box(BENCH_DATA)))
     // });
-    c.bench_function("ajson_path_group", |b| {
-        b.iter(|| ajson_path_group())
-    });
+    c.bench_function("ajson_path_group", |b| b.iter(|| ajson_path_group()));
+    c.bench_function("ajson_parse_path", |b| b.iter(|| ajson_path_group()));
+    c.bench_function("ajson_parse_path_v2", |b| b.iter(|| ajson_path_group()));
 }
 
 criterion_group!(benches, criterion_benchmark);

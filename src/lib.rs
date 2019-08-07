@@ -3,6 +3,7 @@ extern crate regex;
 mod getter;
 mod number;
 mod path;
+pub mod path_v2;
 mod path_parser;
 mod reader;
 mod sub_selector;
