@@ -2,12 +2,14 @@ use path::Path;
 use reader;
 use std::collections::HashMap;
 use std::io;
+use std::str;
 
 use number::Number;
-use std::str;
+use path_v2::Group;
 use sub_selector::SubSelector;
 use unescape;
 use value::Value;
+
 
 pub struct Getter<R>
 where
@@ -57,23 +59,26 @@ impl<R> Getter<reader::LazyReader<R>>
 where
     R: io::Read,
 {
-    pub fn new_from_read(r: R) -> Self {
+    pub fn from_read(r: R) -> Self {
         let lr = reader::LazyReader::new(r);
         Getter { source: lr }
     }
 }
 
 impl<'a> Getter<reader::RefReader<'a>> {
-    pub fn new_from_utf8(v: &'a [u8]) -> Self {
+    pub fn from_utf8(v: &'a [u8]) -> Self {
         let rr = reader::RefReader::new(v);
         Getter { source: rr }
     }
+}
 
+impl<'a> Getter<reader::StrReader<'a>> {
     pub fn from_str(s: &'a str) -> Self {
-        let rr = reader::RefReader::new(s.as_bytes());
-        Getter { source: rr }
+        let sr = reader::StrReader::new(s);
+        Getter { source: sr }
     }
 }
+
 
 impl<R> Getter<R>
 where
@@ -87,7 +92,7 @@ where
 
     pub fn get_by_utf8(&mut self, v: &[u8]) -> Option<Value> {
         if v.len() == 0 {
-            return None
+            return None;
         }
 
         // reset offset
@@ -512,6 +517,73 @@ where
         }
     }
 
+    pub fn group_get(&mut self, group: &mut Group) {
+        while let Some(b) = self.peek() {
+            return match b {
+                b'{' => {
+                    self.next_byte();
+                    self.object_group_get(group)
+                }
+                b'[' => {
+                    self.next_byte();
+                    // self.get_from_array(path);
+                }
+                b'}' | b']' => break,
+                _ => {
+                    self.next_byte();
+                    continue;
+                }
+            };
+        }
+    }
+
+
+    fn object_group_get(&mut self, group: &mut Group) {
+        // println!("group get from object");
+        let mut count = 0;
+        loop {
+            let v = self.read_next_parse_value();
+            if v == ParserValue::NotExist {
+                return;
+            }
+
+            
+            if !group.need_match() {
+                continue;
+            }
+
+
+            count += 1;
+            // println!("count{} ==> value {}", count, self.value_to_raw_str(&v));
+            if count % 2 == 0 {
+                continue;
+            }
+
+
+
+            if let ParserValue::String(start, end) = v {
+                match group.find_sub_group(self.bytes_slice(start + 1, end - 1)) {
+                    Some(mut g) => {
+                        if g.has_sub_path() {
+                            self.group_get(g);
+                            self.next_byte();
+                        // println!("finish object get");
+                        } else {
+                            let pv = self.read_next_parse_value();
+                            // println!("find {} value {:?}", g.index, self.value_to_raw_str(&pv));
+                        }
+
+                        count += 1
+                    }
+                    None => continue,
+                }
+
+            } else {
+                panic!("key must by str");
+            }
+        }
+    }
+
     fn get_from_array(&mut self, path: &Path) -> ParserValue {
         // println!("get array by path {:?}", path);
 
@@ -608,10 +680,7 @@ where
 mod tests {
 
     use super::*;
-
-    #[test]
-    fn test_read_value() {
-        let json = r#"{
+    static json: &'static str = r#"{
     "overflow": 9223372036854775808,
     "widget": {
         "debug": "on",
@@ -655,7 +724,9 @@ mod tests {
     }
 }"#;
 
-        let mut g = Getter::new_from_utf8(json.as_bytes());
+    #[test]
+    fn test_read_value() {
+        let mut g = Getter::from_str(json);
         println!("_________");
         println!("result {:?}", g.get("widget.window.name"));
         println!("result {:?}", g.get("widget.image.hOffset"));
@@ -671,5 +742,32 @@ mod tests {
         println!("result {:?}", g.get("widget.menu.#(sub_item>=7)#.title"));
         println!("result {:?}", g.get("widget.menu"));
         println!("result {:?}", g.get("widget.menu.#"));
+    }
+
+
+    #[test]
+    fn test_group_get() {
+        use path_v2::parse;
+        let mut group = Group::new("");
+        for (i, s) in vec![
+            "widget.window.name",
+            "widget.image.hOffset",
+            "widget.text.onMouseUp",
+            "widget.debug",
+            // "widget.menu.#(sub_item>7)#.title",
+            // "widget.menu.#(nets.#(==7))#.title",
+            "overflow",
+        ]
+        .iter()
+        .enumerate()
+        {
+            let path = parse(s).unwrap();
+            group.add(i, path);
+        }
+
+
+        let mut getter = Getter::from_str(json);
+        getter.group_get(&mut group);
+
     }
 }

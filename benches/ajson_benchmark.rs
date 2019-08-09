@@ -101,16 +101,13 @@ fn ajson_bench(json: &str) {
 fn json_rust_bench(data: &str) {
     let a = &json::parse(data).unwrap();
     black_box(a["widget"]["window"]["name"].as_str().unwrap());
-    let b = &json::parse(data).unwrap();
-    black_box(b["widget"]["image"]["hOffset"].as_i64().unwrap());
-    let c = &json::parse(data).unwrap();
-    black_box(c["widget"]["text"]["onMouseUp"].as_str().unwrap());
-    let d = &json::parse(data).unwrap();
-    black_box(d["widget"]["debug"].as_str().unwrap());
+    black_box(a["widget"]["image"]["hOffset"].as_i64().unwrap());
+    black_box(a["widget"]["text"]["onMouseUp"].as_str().unwrap());
+    black_box(a["widget"]["debug"].as_str().unwrap());
 
     // let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
 
-    let menu = &json::parse(data).unwrap()["widget"]["menu"];
+    let menu = &a["widget"]["menu"];
     let _v: Vec<&JsonValue> = black_box(
         menu.members()
             .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
@@ -122,19 +119,12 @@ fn json_rust_bench(data: &str) {
 fn serde_json_bench(json: &str) {
     let a = &serde_json::from_str::<Value>(json).unwrap();
     black_box(a["widget"]["window"]["name"].as_str().unwrap());
-    let b = &serde_json::from_str::<Value>(json).unwrap();
-    black_box(b["widget"]["image"]["hOffset"].as_i64().unwrap());
-    let c = &serde_json::from_str::<Value>(json).unwrap();
-    black_box(c["widget"]["text"]["onMouseUp"].as_str().unwrap());
-    let d = &serde_json::from_str::<Value>(json).unwrap();
-    black_box(d["widget"]["debug"].as_str().unwrap());
-
-    // // let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
-
-    let menu = &serde_json::from_str::<Value>(json).unwrap();
+    black_box(a["widget"]["image"]["hOffset"].as_i64().unwrap());
+    black_box(a["widget"]["text"]["onMouseUp"].as_str().unwrap());
+    black_box(a["widget"]["debug"].as_str().unwrap());
 
     let _v: Vec<&Value> = black_box(
-        menu["widget"]["menu"]
+        a["widget"]["menu"]
             .as_array()
             .unwrap()
             .iter()
@@ -282,22 +272,25 @@ fn serde_json_derive_multi_query(json: &str) {
     black_box([a.widget.image.src, a.widget.text.data]);
 }
 
-fn ajson_path_group() {
-    use ajson::group;
+fn ajson_path_group(json: &str) {
+    use ajson::path_v2::{Group, parse};
 
-    let mut g = group::PathGroup::new();
-    let pathes = vec![
-        "widget.window.name",
-        "widget.image.hOffset",
-        "widget.text.onMouseUp",
-        "widget.debug",
-        "widget.menu.#(sub_item>7)#.title",
-    ];
+        let mut group = Group::new("");
+        for (i, s) in vec![
+            "widget.window.name",
+            "widget.image.hOffset",
+            "widget.text.onMouseUp",
+            "widget.debug",
+            // "widget.menu.#(sub_item>7)#.title",
+            // "widget.menu.#(nets.#(==7))#.title",
+            "overflow"
+        ].iter().enumerate() {
+            let path = parse(s).unwrap();
+            group.add(i, path);
+        }
 
-    for (i, s) in pathes.iter().enumerate() {
-        let path = ajson::Path::new_from_utf8(s.as_bytes());
-        g.push_path(i, path);
-    }
+        let mut getter = ajson::Getter::from_str(json);
+        getter.group_get(&mut group);
 }
 
 fn ajson_parse_path() {
@@ -356,9 +349,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     // c.bench_function("nom json bench", |b| {
     //     b.iter(|| nom_json_bench(black_box(BENCH_DATA)))
     // });
-    c.bench_function("ajson_path_group", |b| b.iter(|| ajson_path_group()));
-    c.bench_function("ajson_parse_path", |b| b.iter(|| ajson_path_group()));
-    c.bench_function("ajson_parse_path_v2", |b| b.iter(|| ajson_path_group()));
+    c.bench_function("ajson_path_group", |b| b.iter(|| ajson_path_group(black_box(BENCH_DATA))));
+    c.bench_function("ajson_parse_path", |b| b.iter(|| ajson_parse_path()));
+    c.bench_function("ajson_parse_path_v2", |b| b.iter(|| ajson_parse_path_v2()));
 }
 
 criterion_group!(benches, criterion_benchmark);

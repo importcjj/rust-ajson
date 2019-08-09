@@ -63,7 +63,7 @@ fn get(json: &str, path: &str) -> Option<Value> {
         Ok(open) => {
             if open.len() > 0 {
                 println!("get from read");
-                let mut g = Getter::new_from_read(json.as_bytes());
+                let mut g = Getter::from_read(json.as_bytes());
                 g.get(path)
             } else {
                 println!("get from str");
