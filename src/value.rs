@@ -5,13 +5,20 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str;
 
+/// Represents JSON valuue.
 #[derive(PartialEq, Clone)]
 pub enum Value {
+    /// Represents a JSON String.
     String(String),
+    /// Respesents a JSON number.
     Number(Number),
+    /// Respesents a JSON object.
     Object(String),
+    /// Respesents a JSON array.
     Array(String),
+    /// Respesents a JSON boolean.
     Boolean(bool),
+    /// Respesents a JSON null value.
     Null,
 }
 
@@ -31,10 +38,21 @@ impl fmt::Display for Value {
 }
 
 impl Value {
+    /// Get sub value from a JSON array or map.
+    /// About path syntax, see [here](index.html#syntax).
+    /// For more detail, see [`get`](fn.get.html).
+    /// ```
+    /// use ajson::Value;
+    ///
+    /// let v = Value::Array("[1,2,3]".to_owned());
+    /// let first_num = v.get("0").unwrap();
+    /// assert_eq!(first_num.to_i64(), 1_i64);
+    /// ```
     pub fn get(&self, path: &str) -> Option<Value> {
         self.get_by_utf8(&path.as_bytes())
     }
 
+    #[doc(hidden)]
     pub fn get_by_utf8(&self, v: &[u8]) -> Option<Value> {
         match self {
             Value::Array(s) | Value::Object(s) => Getter::from_str(s).get_by_utf8(v),
@@ -45,6 +63,11 @@ impl Value {
 
 impl Value {
 
+    /// Returns true if the `Value` is a JSON string.
+    /// ```
+    /// let v = ajson::get(r#"{"name":"ajson"}"#, "name").unwrap();
+    /// assert!(v.is_string());
+    /// ```
     pub fn is_string(&self) -> bool {
         match self {
             Value::String(_) => true,
