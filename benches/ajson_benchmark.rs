@@ -5,7 +5,13 @@ use criterion::black_box;
 use criterion::Criterion;
 extern crate ajson;
 extern crate json;
+
+#[macro_use]
+extern crate serde;
+extern crate nom;
 extern crate serde_json;
+mod nom_json;
+use nom::error::ErrorKind;
 
 use json::JsonValue;
 use serde_json::Value;
@@ -64,67 +70,214 @@ static BENCH_DATA: &'static str = r#"{
 // }
 
 fn ajson_selector(json: &str) {
-    ajson::get(json, "widget.[image.src,text.data]").unwrap().to_vec();
+    black_box(
+        ajson::get(json, "widget.[image.src,text.data]")
+            .unwrap()
+            .to_vec(),
+    );
 }
 
 fn ajson_multi_query(json: &str) {
-    [
+    black_box([
         ajson::get(json, "widget.image.src"),
         ajson::get(json, "widget.text.data"),
-    ];
+    ]);
 }
 
 fn ajson_bench(json: &str) {
-    ajson::get(json, "widget.window.name").unwrap().as_str();
-    ajson::get(json, "widget.image.hOffset").unwrap().to_f64();
-    ajson::get(json, "widget.text.onMouseUp").unwrap().as_str();
-    ajson::get(json, "widget.debug").unwrap().as_str();
-    // ajson::get(json, "widget.text").to_object();
-    ajson::get(json, "widget.menu.#(sub_item>7)#.title").unwrap().to_vec();
-    // ajson::get(json, "widget.menu.[1.title,2.options]").to_vec();
+    black_box(ajson::get(json, "widget.window.name").unwrap().as_str());
+    black_box(ajson::get(json, "widget.image.hOffset").unwrap().to_f64());
+    black_box(ajson::get(json, "widget.text.onMouseUp").unwrap().as_str());
+    black_box(ajson::get(json, "widget.debug").unwrap().as_str());
+    // ajson::get(json, "widget.text").as_map();
+    black_box(
+        ajson::get(json, "widget.menu.#(sub_item>7)#.title")
+            .unwrap()
+            .to_vec(),
+    );
+    // ajson::get(json, "widget.menu.[1.title,2.options]").as_array();
 }
 
 fn json_rust_bench(data: &str) {
     let a = &json::parse(data).unwrap();
-    a["widget"]["window"]["name"].as_str().unwrap();
+    black_box(a["widget"]["window"]["name"].as_str().unwrap());
     let b = &json::parse(data).unwrap();
-    b["widget"]["image"]["hOffset"].as_i64().unwrap();
+    black_box(b["widget"]["image"]["hOffset"].as_i64().unwrap());
     let c = &json::parse(data).unwrap();
-    c["widget"]["text"]["onMouseUp"].as_str().unwrap();
+    black_box(c["widget"]["text"]["onMouseUp"].as_str().unwrap());
     let d = &json::parse(data).unwrap();
-    d["widget"]["debug"].as_str().unwrap();
+    black_box(d["widget"]["debug"].as_str().unwrap());
 
     // let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
 
     let menu = &json::parse(data).unwrap()["widget"]["menu"];
-    let _v: Vec<&JsonValue> = menu
+    let _v: Vec<&JsonValue> = black_box(menu
         .members()
         .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
         .map(|x| &x["title"])
-        .collect();
+        .collect());
 }
 
 fn serde_json_bench(json: &str) {
     let a = &serde_json::from_str::<Value>(json).unwrap();
-    a["widget"]["window"]["name"].as_str().unwrap();
+    black_box(a["widget"]["window"]["name"].as_str().unwrap());
     let b = &serde_json::from_str::<Value>(json).unwrap();
-    b["widget"]["image"]["hOffset"].as_i64().unwrap();
+    black_box(b["widget"]["image"]["hOffset"].as_i64().unwrap());
     let c = &serde_json::from_str::<Value>(json).unwrap();
-    c["widget"]["text"]["onMouseUp"].as_str().unwrap();
+    black_box(c["widget"]["text"]["onMouseUp"].as_str().unwrap());
     let d = &serde_json::from_str::<Value>(json).unwrap();
-    d["widget"]["debug"].as_str().unwrap();
+    black_box(d["widget"]["debug"].as_str().unwrap());
 
     // // let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
 
-    let menu = &serde_json::from_str::<Value>(BENCH_DATA).unwrap();
+    let menu = &serde_json::from_str::<Value>(json).unwrap();
 
-    let _v: Vec<&Value> = menu["widget"]["menu"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
-        .map(|x| &x["title"])
-        .collect();
+    let _v: Vec<&Value> = black_box(
+        menu["widget"]["menu"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
+            .map(|x| &x["title"])
+            .collect(),
+    );
+}
+
+fn serde_json_derive_bench(json: &str) {
+    #![allow(non_snake_case)]
+
+    {
+        #[derive(Deserialize)]
+        struct Main {
+            widget: Widget,
+        }
+        #[derive(Deserialize)]
+        struct Widget {
+            window: Window,
+        }
+        #[derive(Deserialize)]
+        struct Window {
+            name: String,
+        }
+
+        let a = serde_json::from_str::<Main>(json).unwrap();
+        black_box(a.widget.window.name);
+    }
+
+    {
+        #[derive(Deserialize)]
+        struct Main {
+            widget: Widget,
+        }
+        #[derive(Deserialize)]
+        struct Widget {
+            image: Image,
+        }
+        #[derive(Deserialize)]
+        struct Image {
+            hOffset: i64,
+        }
+        let b = serde_json::from_str::<Main>(json).unwrap();
+        black_box(b.widget.image.hOffset);
+    }
+
+    {
+        #[derive(Deserialize)]
+        struct Main {
+            widget: Widget,
+        }
+        #[derive(Deserialize)]
+        struct Widget {
+            text: Text,
+        }
+        #[derive(Deserialize)]
+        struct Text {
+            onMouseUp: String,
+        }
+        let c = serde_json::from_str::<Main>(json).unwrap();
+        black_box(c.widget.text.onMouseUp);
+    }
+
+    {
+        #[derive(Deserialize)]
+        struct Main {
+            widget: Widget,
+        }
+        #[derive(Deserialize)]
+        struct Widget {
+            debug: String,
+        }
+        let d = serde_json::from_str::<Main>(json).unwrap();
+        black_box(d.widget.debug);
+    }
+
+    {
+        #[derive(Deserialize)]
+        struct Main {
+            widget: Widget,
+        }
+        #[derive(Deserialize)]
+        struct Widget {
+            menu: Vec<Item>,
+        }
+        #[derive(Deserialize)]
+        struct Item {
+            sub_item: i64,
+            title: Value,
+        }
+        let e = serde_json::from_str::<Main>(json).unwrap();
+        black_box(
+            e.widget
+                .menu
+                .into_iter()
+                .filter(|x| x.sub_item > 5)
+                .map(|x| x.title)
+                .collect::<Vec<_>>(),
+        );
+    }
+}
+
+fn nom_json_bench(json: &str) {
+    match nom_json::root::<(&str, ErrorKind)>(json) {
+        Ok((_, value)) => {
+            black_box(&value["widget"]["window"]["name"].as_str());
+            black_box(&value["widget"]["image"]["hOffset"]);
+            black_box(&value["widget"]["text"]["onMouseUp"].as_str());
+            black_box(&value["widget"]["debug"].as_str());
+
+            let menu = &value["widget"]["menu"];
+            let _v: Vec<&nom_json::JsonValue> = black_box(
+                menu.members()
+                    .filter(|x| x["sub_item"].to_f64() > 5.0)
+                    .map(|x| &x["title"])
+                    .collect(),
+            );
+        }
+        _ => (),
+    };
+}
+
+fn serde_json_derive_multi_query(json: &str) {
+    #[derive(Deserialize)]
+    struct Main {
+        widget: Widget,
+    }
+    #[derive(Deserialize)]
+    struct Widget {
+        image: Image,
+        text: Text,
+    }
+    #[derive(Deserialize)]
+    struct Image {
+        src: Value,
+    }
+    #[derive(Deserialize)]
+    struct Text {
+        data: Value,
+    }
+
+    let a = serde_json::from_str::<Main>(json).unwrap();
+    black_box([a.widget.image.src, a.widget.text.data]);
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
@@ -143,6 +296,15 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
     c.bench_function("ajson multi query", |b| {
         b.iter(|| ajson_multi_query(black_box(BENCH_DATA)))
+    });
+    c.bench_function("serde derive", |b| {
+        b.iter(|| serde_json_derive_bench(black_box(BENCH_DATA)))
+    });
+    c.bench_function("serde derive multi query", |b| {
+        b.iter(|| serde_json_derive_multi_query(black_box(BENCH_DATA)))
+    });
+    c.bench_function("nom json bench", |b| {
+        b.iter(|| nom_json_bench(black_box(BENCH_DATA)))
     });
 }
 

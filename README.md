@@ -6,7 +6,7 @@
   <a href="https://github.com/importcjj/ajson">
   <img src="https://travis-ci.org/importcjj/a-json.svg?branch=master"></a>
 
-  <img src="https://img.shields.io/badge/crates.io-0.1.0-blue">
+  <img src="https://img.shields.io/badge/crates.io-0.2.0-blue">
 
   <a href="https://importcjj.github.io/rust-ajson-playground/">
   <img src="https://img.shields.io/badge/goto-playground-orange">
@@ -24,7 +24,7 @@ Inspiration comes from [gjson](https://github.com/tidwall/gjson) in golang
 Add it to your `Cargo.toml` file:
 ```
 [dependencies]
-ajson = "0.1"
+ajson = "0.2"
 ```
 Then add it to your code:
 ```rust
