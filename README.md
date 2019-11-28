@@ -3,8 +3,8 @@
   <h1>A-JSON</h1>
   <p>Read JSON values quickly - Rust JSON Parser</p>
 
-  <a href="https://github.com/importcjj/ajson">
-  <img src="https://travis-ci.org/importcjj/a-json.svg?branch=master"></a>
+  <a href="https://github.com/importcjj/rust-ajson">
+  <img src="https://travis-ci.org/importcjj/rust-ajson.svg?branch=master"></a>
 
   <img src="https://img.shields.io/badge/crates.io-0.2.0-blue">
 
