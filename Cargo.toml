@@ -1,12 +1,13 @@
 [package]
 name = "ajson"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["importcjj <importcjj@gmail.com>"]
 license = "MIT"
 description = "JSON Parser for Rust - Get JSON values quickly"
 keywords = ["json", "json-parser", "gjson", "ajson"]
 categories = ["encoding"]
 readme = "README.md"
+documentation = "https://docs.rs/ajson/latest/ajson/"
 repository = "https://github.com/importcjj/rust-ajson"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-MIT"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
