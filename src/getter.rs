@@ -9,6 +9,7 @@ use sub_selector::SubSelector;
 use unescape;
 use value::Value;
 
+#[doc(hidden)]
 pub struct Getter<R>
 where
     R: reader::ByteReader,
