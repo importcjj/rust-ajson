@@ -62,6 +62,10 @@ pub trait ByteReader {
                 b'\\' => {
                     self.next();
                 }
+                b'"' => {
+                    let (_, end) = self.read_str_value();
+                    self.seek(end);
+                }
                 b'[' | b'{' => depth += 1,
                 b']' | b'}' => {
                     depth -= 1;

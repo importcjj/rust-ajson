@@ -569,3 +569,16 @@ fn test_single_array_value() {
 //     assert!(r.get(r#"loggy.programmers.#(firstName=="x""#).is_null());
 //     assert!(r.get(r#"loggy.programmers.#()"#).is_null());
 // }
+
+#[test]
+fn test_bracket_in_array() {
+    let json = r##"{
+    "children": ["Sara","Alex]","Jack"],
+    "##;
+    let r = parse(json).unwrap();
+    assert_eq!(r.get("children.#").unwrap().to_i64(), 3);
+    assert_eq!(r.get("children").unwrap().to_vec(), vec!["Sara", "Alex]", "Jack"]);
+    assert_eq!(r.get("children.1").unwrap(), "Alex]");
+    assert_eq!(r.get("child*.2").unwrap(), "Jack");
+    assert_eq!(r.get("c?ildren.0").unwrap(), "Sara");
+}

@@ -1,6 +1,6 @@
 [package]
 name = "ajson"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["importcjj <importcjj@gmail.com>"]
 license = "MIT"
 description = "JSON Parser for Rust - Get JSON values quickly"
