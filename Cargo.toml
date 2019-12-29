@@ -24,4 +24,5 @@ nom = "5"
 
 [[bench]]
 name = "ajson_benchmark"
+path = "benches/ajson_benchmark.rs"
 harness = false
