@@ -100,6 +100,7 @@ mod wild;
 
 pub use getter::Getter;
 pub use number::Number;
+pub use unescape::unescape;
 use std::io;
 pub use value::Value;
 
