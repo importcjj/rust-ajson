@@ -582,3 +582,18 @@ fn test_bracket_in_array() {
     assert_eq!(r.get("child*.2").unwrap(), "Jack");
     assert_eq!(r.get("c?ildren.0").unwrap(), "Sara");
 }
+
+#[test]
+fn test_key_unicode() {
+    {
+        let json = r#"{"sample_unicode\u0041\u0042": "HelloWorld"}"#;
+        assert_eq!(get(json, "sample_unicodeAB").unwrap(), "HelloWorld");
+    }
+
+    {
+        let json = r#"{"的情况下解\u0030\u0031\u0032":{"key":1,"的情况":2}}"#;
+        assert_eq!(get(json, "的情况下解012.key").unwrap().to_u64(), 1);
+        assert_eq!(get(json, "的情况下解012.的情况").unwrap().to_u64(), 2);
+    }
+
+}
