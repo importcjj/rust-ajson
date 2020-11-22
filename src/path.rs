@@ -5,6 +5,7 @@ use sub_selector::SubSelector;
 use util;
 use value::Value;
 use wild;
+use unescape::unescape;
 
 static DEFAULT_NONE_QUERY: Query = Query {
     on: false,
@@ -89,6 +90,12 @@ impl<'a> Path<'a> {
     }
 
     pub fn is_match(&self, key: &[u8]) -> bool {
+        let optional_key = if key.contains(&b'\\') {
+              Some(unescape(key))
+        } else {
+            None
+        };
+        let key = optional_key.as_ref().map_or(key, |v| v.as_bytes());
         let eq = if self.wild {
             wild::is_match_u8(key, self.part)
         } else {
