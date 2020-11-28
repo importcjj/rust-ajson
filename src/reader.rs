@@ -110,7 +110,7 @@ pub trait ByteReader {
         let start = self.position();
         while let Some(b) = self.next() {
             match b {
-                b'0'...b'9' => (),
+                b'0'..=b'9' => (),
                 b'-' | b'.' => (),
                 _ => return (start, self.position() - 1),
             };
@@ -279,7 +279,7 @@ where
 
         let b = self.buffer[self.offset];
         self.offset += 1;
-        return Some(b);
+        Some(b)
     }
 
     fn peek(&mut self) -> Option<u8> {

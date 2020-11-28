@@ -69,45 +69,27 @@ impl Value {
     /// assert!(v.is_string());
     /// ```
     pub fn is_string(&self) -> bool {
-        match self {
-            Value::String(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::String(_))
     }
 
     pub fn is_number(&self) -> bool {
-        match self {
-            Value::Number(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::Number(_))
     }
 
     pub fn is_array(&self) -> bool {
-        match self {
-            Value::Array(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::Array(_))
     }
 
     pub fn is_object(&self) -> bool {
-        match self {
-            Value::Object(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::Object(_))
     }
 
     pub fn is_bool(&self) -> bool {
-        match self {
-            Value::Boolean(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::Boolean(_))
     }
 
     pub fn is_null(&self) -> bool {
-        match self {
-            Value::Null => true,
-            _ => false,
-        }
+        matches!(self, Value::Null)
     }
 }
 

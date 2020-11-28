@@ -2,10 +2,10 @@ use path_parser;
 use std::fmt;
 use sub_selector::SubSelector;
 
+use unescape::unescape;
 use util;
 use value::Value;
 use wild;
-use unescape::unescape;
 
 static DEFAULT_NONE_QUERY: Query = Query {
     on: false,
@@ -91,7 +91,7 @@ impl<'a> Path<'a> {
 
     pub fn is_match(&self, key: &[u8]) -> bool {
         let optional_key = if key.contains(&b'\\') {
-              Some(unescape(key))
+            Some(unescape(key))
         } else {
             None
         };
@@ -316,9 +316,9 @@ impl<'a> Query<'a> {
 
             QueryValue::F64(q) => match v {
                 Value::Number(n) => match op.as_str() {
-                    "=" => n.to_f64() == *q,
-                    "==" => n.to_f64() == *q,
-                    "!=" => n.to_f64() != *q,
+                    "=" => (n.to_f64() - *q).abs() < f64::EPSILON,
+                    "==" => (n.to_f64() - *q).abs() < f64::EPSILON,
+                    "!=" => (n.to_f64() - *q).abs() > f64::EPSILON,
                     "<" => n.to_f64() < *q,
                     "<=" => n.to_f64() <= *q,
                     ">" => n.to_f64() > *q,

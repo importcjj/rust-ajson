@@ -38,21 +38,21 @@ pub fn unescape(v: &[u8]) -> String {
                         // U+D800—U+DBFF (1,024 code points): high surrogates
                         // U+DC00—U+DFFF (1,024 code points): low surrogates
                         match codepoint {
-                            0x0000...0xD7FF => (),
-                            0xD800...0xDBFF => {
+                            0x0000..=0xD7FF => (),
+                            0xD800..=0xDBFF => {
                                 if i + 5 < v.len() && v[i] == b'\\' {
                                     codepoint -= 0xD800;
                                     codepoint <<= 10;
                                     let lower = u8s_to_u32(&v[i + 2..i + 6]);
-                                    if let 0xDC00...0xDFFF = lower {
-                                        codepoint = (codepoint | lower - 0xDC00) + 0x010000;
+                                    if let 0xDC00..=0xDFFF = lower {
+                                        codepoint = (codepoint | (lower - 0xDC00)) + 0x010000;
                                     }
                                     i += 6;
                                 } else {
                                     i += 2;
                                 }
                             }
-                            0xE000...0xFFFF => (),
+                            0xE000..=0xFFFF => (),
                             _ => is_surrogate_pair = false,
                         };
 
@@ -73,13 +73,13 @@ pub fn unescape(v: &[u8]) -> String {
                         }
                         i -= 1;
                     }
-                    b @ _ => {
+                    b => {
                         s.push(b'\\');
                         s.push(b);
                     }
                 }
             }
-            c @ _ => s.push(c),
+            c => s.push(c),
         }
         i += 1;
     }
@@ -93,27 +93,27 @@ fn u8s_to_u32(v: &[u8]) -> u32 {
 
 fn u8_to_u32(b: u8) -> u32 {
     let r = match b {
-        b'0'...b'9' => (b - b'0'),
-        b'a'...b'f' => (b + 10 - b'a'),
-        b'A'...b'F' => (b + 10 - b'A'),
+        b'0'..=b'9' => (b - b'0'),
+        b'a'..=b'f' => (b + 10 - b'a'),
+        b'A'..=b'F' => (b + 10 - b'A'),
         _ => panic!("unexpected byte"),
     };
     r as u32
 }
 
-fn write_codepoint<'a>(codepoint: u32, buffer: &mut Vec<u8>) -> bool {
+fn write_codepoint(codepoint: u32, buffer: &mut Vec<u8>) -> bool {
     match codepoint {
-        0x0000...0x007F => buffer.push(codepoint as u8),
-        0x0080...0x07FF => buffer.extend_from_slice(&[
+        0x0000..=0x007F => buffer.push(codepoint as u8),
+        0x0080..=0x07FF => buffer.extend_from_slice(&[
             (((codepoint >> 6) as u8) & 0x1F) | 0xC0,
             ((codepoint as u8) & 0x3F) | 0x80,
         ]),
-        0x0800...0xFFFF => buffer.extend_from_slice(&[
+        0x0800..=0xFFFF => buffer.extend_from_slice(&[
             (((codepoint >> 12) as u8) & 0x0F) | 0xE0,
             (((codepoint >> 6) as u8) & 0x3F) | 0x80,
             ((codepoint as u8) & 0x3F) | 0x80,
         ]),
-        0x10000...0x10FFFF => buffer.extend_from_slice(&[
+        0x10000..=0x10FFFF => buffer.extend_from_slice(&[
             (((codepoint >> 18) as u8) & 0x07) | 0xF0,
             (((codepoint >> 12) as u8) & 0x3F) | 0x80,
             (((codepoint >> 6) as u8) & 0x3F) | 0x80,
