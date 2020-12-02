@@ -34,7 +34,7 @@ fn last_of_name(v: &[u8]) -> &[u8] {
     //     }
     // }
 
-    if v.len() == 0 {
+    if v.is_empty() {
         return v;
     }
 
@@ -51,7 +51,7 @@ fn last_of_name(v: &[u8]) -> &[u8] {
         i -= 1;
     }
 
-    return v;
+    v
 }
 
 pub fn parse_selectors_from_utf8<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usize, bool) {

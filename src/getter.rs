@@ -38,11 +38,7 @@ impl ParserValue {
     }
 
     pub fn is_vector(&self) -> bool {
-        if let ParserValue::ArrayString(_) = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, ParserValue::ArrayString(_))
     }
 
     pub fn vector_to_value(self) -> Option<Value> {
@@ -86,8 +82,8 @@ where
     }
 
     pub fn get_by_utf8(&mut self, v: &[u8]) -> Option<Value> {
-        if v.len() == 0 {
-            return None
+        if v.is_empty() {
+            return None;
         }
 
         // reset offset
@@ -106,33 +102,30 @@ where
         let mut key_cache: Option<String> = None;
         let mut count = 0;
         'outer: while let Some(b) = self.peek() {
-            match b {
-                b'{' => {
-                    self.next_byte();
-                    loop {
-                        let v = self.read_next_parse_value();
-                        if v.exists() {
-                            count += 1;
-                            if count % 2 == 1 {
-                                match v {
-                                    ParserValue::String(start, end) => {
-                                        let s = String::from_utf8_lossy(
-                                            self.bytes_slice(start + 1, end - 1),
-                                        )
-                                        .to_string();
-                                        key_cache = Some(s);
-                                    }
-                                    _ => panic!("invalid map key"),
-                                };
-                            } else {
-                                m.insert(key_cache.take().unwrap(), self.parse_value(v).unwrap());
-                            }
-                            continue;
+            if let b'{' = b {
+                self.next_byte();
+                loop {
+                    let v = self.read_next_parse_value();
+                    if v.exists() {
+                        count += 1;
+                        if count % 2 == 1 {
+                            match v {
+                                ParserValue::String(start, end) => {
+                                    let s = String::from_utf8_lossy(
+                                        self.bytes_slice(start + 1, end - 1),
+                                    )
+                                    .to_string();
+                                    key_cache = Some(s);
+                                }
+                                _ => panic!("invalid map key"),
+                            };
+                        } else {
+                            m.insert(key_cache.take().unwrap(), self.parse_value(v).unwrap());
                         }
-                        break 'outer;
+                        continue;
                     }
+                    break 'outer;
                 }
-                _ => (),
             };
 
             self.next_byte();
@@ -144,19 +137,16 @@ where
     pub fn to_vec(&mut self) -> Vec<Value> {
         let mut arr = Vec::new();
         'outer: while let Some(b) = self.peek() {
-            match b {
-                b'[' => {
-                    self.next_byte();
-                    loop {
-                        let v = self.read_next_parse_value();
-                        if v.exists() {
-                            arr.push(self.parse_value(v).unwrap());
-                            continue;
-                        }
-                        break 'outer;
+            if let b'[' = b {
+                self.next_byte();
+                loop {
+                    let v = self.read_next_parse_value();
+                    if v.exists() {
+                        arr.push(self.parse_value(v).unwrap());
+                        continue;
                     }
+                    break 'outer;
                 }
-                _ => (),
             };
 
             self.next_byte();
@@ -219,10 +209,10 @@ where
                 v.extend(s.as_bytes())
             }
 
-            ParserValue::Boolean(true) => v.extend("true".as_bytes()),
-            ParserValue::Boolean(false) => v.extend("false".as_bytes()),
+            ParserValue::Boolean(true) => v.extend(b"true"),
+            ParserValue::Boolean(false) => v.extend(b"false"),
             ParserValue::NumberUsize(ref u) => v.extend(u.to_string().as_bytes()),
-            ParserValue::Null => v.extend("null".as_bytes()),
+            ParserValue::Null => v.extend(b"null"),
             _ => (),
         };
     }
@@ -417,7 +407,7 @@ where
                 b't' | b'f' => self.read_boolean_value(),
                 b'n' => self.read_null_value(),
                 b'{' | b'[' => self.read_json_value(),
-                b'0'...b'9' | b'-' | b'.' => self.read_number_value(),
+                b'0'..=b'9' | b'-' | b'.' => self.read_number_value(),
                 b'}' | b']' => ParserValue::NotExist,
                 _ => {
                     self.next_byte();

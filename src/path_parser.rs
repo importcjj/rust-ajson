@@ -6,8 +6,8 @@ use sub_selector;
 use number::Number;
 use util;
 
-fn parse_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
-    if v.len() == 0 {
+fn parse_path_from_utf8(v: &[u8]) -> Path {
+    if v.is_empty() {
         return Path::empty();
     }
     // println!("parse path {:?}", String::from_utf8_lossy(v));
@@ -84,8 +84,8 @@ fn parse_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
     current_path
 }
 
-fn parse_query_from_utf8<'a>(v: &'a [u8]) -> (Query<'a>, usize) {
-    if v.len() == 0 {
+fn parse_query_from_utf8(v: &[u8]) -> (Query, usize) {
+    if v.is_empty() {
         return (Query::empty(), 0);
     }
 
@@ -164,7 +164,7 @@ fn parse_query_from_utf8<'a>(v: &'a [u8]) -> (Query<'a>, usize) {
 fn parser_query_value(v: &[u8]) -> (QueryValue, usize) {
     // println!("parse query value {:?}", String::from_utf8_lossy(v));
     let mut reader = reader::RefReader::new(v);
-    while let Some(b) = reader.peek() {
+    if let Some(b) = reader.peek() {
         let value = match b {
             b't' => {
                 reader.read_boolean_value();
@@ -189,7 +189,7 @@ fn parser_query_value(v: &[u8]) -> (QueryValue, usize) {
                 }
                 // Value::Null
             }
-            b'0'...b'9' | b'-' => {
+            b'0'..=b'9' | b'-' => {
                 let n = Number::from(&mut reader);
                 QueryValue::F64(n.to_f64())
             }
@@ -264,12 +264,12 @@ fn parser_query_value(v: &[u8]) -> (QueryValue, usize) {
 //     (q, reader.position())
 // }
 
-pub fn new_path_from_utf8<'a>(v: &'a [u8]) -> Path<'a> {
+pub fn new_path_from_utf8(v: &[u8]) -> Path {
     parse_path_from_utf8(v)
 }
 
 #[allow(dead_code)]
-fn new_query_from_utf8<'a>(v: &'a [u8]) -> Query<'a> {
+fn new_query_from_utf8(v: &[u8]) -> Query {
     let (q, _) = parse_query_from_utf8(v);
     q
 }
