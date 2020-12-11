@@ -1,9 +1,9 @@
-use reader;
-use reader::ByteReader;
-
+use reader::Bytes;
 use std::fmt;
 use std::str;
 use util;
+
+use crate::element;
 
 pub struct SubSelector<'a> {
     pub name: &'a [u8],
@@ -54,8 +54,8 @@ fn last_of_name(v: &[u8]) -> &[u8] {
     v
 }
 
-pub fn parse_selectors_from_utf8<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usize, bool) {
-    let mut reader = reader::RefReader::new(v);
+pub fn parse_selectors<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usize, bool) {
+    let mut reader = Bytes::new(v);
     let mut depth = 0;
     let mut start = 0;
     let mut colon = 0;
@@ -82,7 +82,8 @@ pub fn parse_selectors_from_utf8<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usiz
                 reader.next();
             }
             b'"' => {
-                reader.read_str_value();
+                element::read_str(&mut reader);
+
                 continue;
             }
             b':' => {
@@ -128,13 +129,13 @@ mod tests {
     #[test]
     fn test_parse_selectors_from_utf8() {
         let path = r#"{name.first,age,murphys:friends.#(last="Murphy")#.first}"#;
-        let (sels, length, ok) = parse_selectors_from_utf8(path.as_bytes());
+        let (sels, length, ok) = parse_selectors(path.as_bytes());
         println!("length {}", length);
         println!("ok {}", ok);
         println!("sels {:?}", sels);
 
         let path = r#"[name,a]"#;
-        let (sels, length, ok) = parse_selectors_from_utf8(path.as_bytes());
+        let (sels, length, ok) = parse_selectors(path.as_bytes());
         println!("length {}", length);
         println!("ok {}", ok);
         println!("sels {:?}", sels);

@@ -1,4 +1,4 @@
-use reader::{ByteReader, RefReader};
+use reader::Bytes;
 use std::convert::From;
 const MIN_UINT_53: u64 = 0;
 const MAX_UINT_53: u64 = 4503599627370495;
@@ -7,6 +7,9 @@ const MAX_INT_53: i64 = 2251799813685247;
 const ZERO_UINT: u64 = 0;
 const ZERO_INT: i64 = 0;
 const ZERO_FLOAT: f64 = 0.0;
+const ZERO_FLOAT_F32: f32 = 0.0;
+const ZERO_INT_I32: i32 = 0;
+const ZERO_INT_U32: u32 = 0;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Number {
@@ -17,7 +20,7 @@ pub enum Number {
 
 impl<'a> From<&'a [u8]> for Number {
     fn from(v: &[u8]) -> Number {
-        let mut reader = RefReader::new(v);
+        let mut reader = Bytes::new(v);
         Number::from(&mut reader)
     }
 }
@@ -28,11 +31,8 @@ impl<'a> From<&'a str> for Number {
     }
 }
 
-impl<'a, R> From<&'a mut R> for Number
-where
-    R: ByteReader,
-{
-    fn from(r: &mut R) -> Number {
+impl<'a> From<&mut Bytes<'a>> for Number {
+    fn from(r: &mut Bytes<'a>) -> Number {
         let start = r.position();
         let sign = match r.peek() {
             Some(b'-') => true,
@@ -85,10 +85,21 @@ impl Number {
         }
     }
 
+    pub fn to_f32(&self) -> f32 {
+        // println!("{:?}", self);
+        match self {
+            Number::F64(s) => s.parse().unwrap_or(ZERO_FLOAT_F32),
+            Number::U64(s) => s.parse().unwrap_or(ZERO_FLOAT_F32),
+            Number::I64(s) => s.parse().unwrap_or(ZERO_FLOAT_F32),
+        }
+    }
+
     pub fn to_u64(&self) -> u64 {
         // println!("{:?}", self);
         match self {
-            Number::F64(s) => f64_to_u64(self.to_f64()).unwrap_or_else(|| parse_uint_lossy(s.as_bytes())),
+            Number::F64(s) => {
+                f64_to_u64(self.to_f64()).unwrap_or_else(|| parse_uint_lossy(s.as_bytes()))
+            }
             Number::I64(s) => s.parse().unwrap_or(ZERO_UINT),
             Number::U64(s) => s.parse().unwrap_or(ZERO_UINT),
         }
@@ -97,7 +108,9 @@ impl Number {
     pub fn to_i64(&self) -> i64 {
         // println!("{:?}", self);
         match self {
-            Number::F64(s) => f64_to_i64(self.to_f64()).unwrap_or_else(|| parse_int_lossy(s.as_bytes())),
+            Number::F64(s) => {
+                f64_to_i64(self.to_f64()).unwrap_or_else(|| parse_int_lossy(s.as_bytes()))
+            }
             Number::I64(s) => s.parse().unwrap_or(ZERO_INT),
             Number::U64(s) => s.parse().unwrap_or(ZERO_INT),
         }

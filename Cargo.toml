@@ -13,8 +13,12 @@ include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-MIT"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 autobenches = false
 
+[features]
+default = []
+wild = ["regex"]
+
 [dependencies]
-regex = "1"
+regex = { version = "1", optional = true }
 
 [dev-dependencies]
 criterion = "0.2"

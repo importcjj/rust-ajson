@@ -73,27 +73,44 @@ fn ajson_selector(json: &str) {
     black_box(
         ajson::get(json, "widget.[image.src,text.data]")
             .unwrap()
-            .to_vec(),
+            .unwrap()
+            .as_vec(),
     );
 }
 
 fn ajson_multi_query(json: &str) {
     black_box([
-        ajson::get(json, "widget.image.src"),
-        ajson::get(json, "widget.text.data"),
+        ajson::get(json, "widget.image.src").unwrap(),
+        ajson::get(json, "widget.text.data").unwrap(),
     ]);
 }
 
 fn ajson_bench(json: &str) {
-    black_box(ajson::get(json, "widget.window.name").unwrap().as_str());
-    black_box(ajson::get(json, "widget.image.hOffset").unwrap().to_f64());
-    black_box(ajson::get(json, "widget.text.onMouseUp").unwrap().as_str());
-    black_box(ajson::get(json, "widget.debug").unwrap().as_str());
+    black_box(
+        ajson::get(json, "widget.window.name")
+            .unwrap()
+            .unwrap()
+            .as_str(),
+    );
+    black_box(
+        ajson::get(json, "widget.image.hOffset")
+            .unwrap()
+            .unwrap()
+            .as_f64(),
+    );
+    black_box(
+        ajson::get(json, "widget.text.onMouseUp")
+            .unwrap()
+            .unwrap()
+            .as_str(),
+    );
+    black_box(ajson::get(json, "widget.debug").unwrap().unwrap().as_str());
     // ajson::get(json, "widget.text").as_map();
     black_box(
         ajson::get(json, "widget.menu.#(sub_item>7)#.title")
             .unwrap()
-            .to_vec(),
+            .unwrap()
+            .as_vec(),
     );
     // ajson::get(json, "widget.menu.[1.title,2.options]").as_array();
 }
@@ -111,11 +128,12 @@ fn json_rust_bench(data: &str) {
     // let text = &serde_json::from_str::<Value>(BENCH_DATA).unwrap()["widget"]["text"] ;
 
     let menu = &json::parse(data).unwrap()["widget"]["menu"];
-    let _v: Vec<&JsonValue> = black_box(menu
-        .members()
-        .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
-        .map(|x| &x["title"])
-        .collect());
+    let _v: Vec<&JsonValue> = black_box(
+        menu.members()
+            .filter(|x| x["sub_item"].as_i64().unwrap() > 5)
+            .map(|x| &x["title"])
+            .collect(),
+    );
 }
 
 fn serde_json_bench(json: &str) {

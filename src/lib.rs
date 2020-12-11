@@ -1,22 +1,26 @@
-/*! 
+/*!
 # A-JSON
 Ajson is a lightweight json parser that allows users to dynamically retrieve values in json using a simple syntax.
 
 ## Examples
 ```
-let data = r#"
-{
-"project": {
-    "name": "ajson",
-    "maintainer": "importcjj",
-    "version": 0.1,
-    "rusts": ["stable", "nightly"]
-}
-}
-"#;
+use ajson::Result;
+fn main() -> Result<()> {
+    let data = r#"
+    {
+    "project": {
+        "name": "ajson",
+        "maintainer": "importcjj",
+        "version": 0.1,
+        "rusts": ["stable", "nightly"]
+        }
+    }
+    "#;
 
-let name = ajson::get(data, "project.name").unwrap();
-assert_eq!(name, "ajson");
+    let name = ajson::get(data, "project.name")?.unwrap();
+    assert_eq!(name, "ajson");
+    Ok(())
+}
 ```
 ## Syntax
 JSON example
@@ -39,7 +43,7 @@ Below is a quick overview of the path syntax, for more complete information plea
 
 A path is a series of keys separated by a dot. A key may contain special wildcard characters '*' and '?'. To access an array value use the index as the key. To get the number of elements in an array or to access a child path, use the '#' character. The dot and wildcard characters can be escaped with ''.
 
-```text 
+```text
 name.last        >> "Anderson"
 age              >> 37
 children         >> ["Sara","Alex","Jack"]
@@ -85,10 +89,14 @@ Basically, you can use selectors to assemble whatever you want, and of course, t
 ```
 */
 
+#[cfg(feature = "wild")]
 extern crate regex;
+#[cfg(feature = "wild")]
+mod wild;
 
-mod getter;
+mod element;
 mod number;
+mod parser;
 mod path;
 mod path_parser;
 mod reader;
@@ -96,69 +104,78 @@ mod sub_selector;
 mod unescape;
 mod util;
 mod value;
-mod wild;
 
-pub use getter::Getter;
+
 pub use number::Number;
 pub use unescape::unescape;
-use std::io;
 pub use value::Value;
 
-/// `get` value from JSON string with the specified path, it is relatively loose and 
+use std::result;
+
+#[derive(Debug)]
+pub enum Error {
+    Path,
+    Eof,
+    ObjectKey,
+    Object,
+    Array,
+}
+
+pub type Result<T> = result::Result<T, Error>;
+
+/// `get` value from JSON string with the specified path, it is relatively loose and
 /// can tolerate some illegal JSON.
 /// ```
-/// let data = r#"{"name": "ajson"}"#;
-/// let v = ajson::get(data, "name").unwrap();
-/// assert_eq!(v.as_str(), "ajson");
+/// use ajson::Result;
+/// fn main() -> Result<()> {
+///     let data = r#"{"name": "ajson"}"#;
+///     let v = ajson::get(data, "name")?.unwrap();
+///     assert_eq!(v, "ajson");
+///     Ok(())
+/// }
 /// ```
-/// If the given JSON is not a valid JSON, then ajson 
-/// will try to get the value from the first JSON array 
+/// If the given JSON is not a valid JSON, then ajson
+/// will try to get the value from the first JSON array
 /// or map it finds.
 /// ```
-/// let data = r#"someinvalidstring{"name": "ajson"}"#;
-/// let v = ajson::get(data, "name").unwrap();
-/// assert_eq!(v.as_str(), "ajson");
+/// use ajson::Result;
+/// fn main() -> Result<()> {
+///     let data = r#"someinvalidstring{"name": "ajson"}"#;
+///     let v = ajson::get(data, "name")?.unwrap();
+///     assert_eq!(v, "ajson");
+///     Ok(())
+/// }
 /// ```
-/// If there is no valid JSON array or map in the given JSON, 
+/// If there is no valid JSON array or map in the given JSON,
 /// `get` returns None.
 /// ```should_panic
 /// let data = r#"someinvalidstring"#;
-/// let v = ajson::get(data, "name").unwrap();
+/// let v = ajson::get(data, "name").unwrap().unwrap();
 /// ```
-pub fn get(json: &str, path: &str) -> Option<Value> {
-    Getter::new_from_utf8(json.as_bytes()).get(path)
+pub fn get<'a>(json: &'a str, path: &'a str) -> Result<Option<Value<'a>>> {
+    let buf = json.as_bytes();
+    let mut bytes = reader::Bytes::new(buf);
+    let path = path::Path::parse(path.as_bytes())?;
+    Ok(parser::bytes_get(&mut bytes, &path)?.map(|el| el.to_value()))
 }
 
-
-/// Returns the first JSON value parsed, and it may be having 
-/// problems because it does not actively panic on incomplete 
+/// Returns the first JSON value parsed, and it may be having
+/// problems because it does not actively panic on incomplete
 /// JSON values. For example, array or map are not closed properly.
 /// ```
-/// let v = ajson::parse(r#"{"name": "ajson"}"#).unwrap();
-/// assert!(v.is_object());
-/// let v = ajson::parse(r#"{"name": "ajson""#).unwrap();
-/// assert!(v.is_object());
-/// let v = ajson::parse(r#"null,"string", 2"#).unwrap();
-/// assert!(v.is_null());
+/// use ajson::Result;
+/// fn main() -> Result<()> {
+///     let v = ajson::parse(r#"{"name": "ajson"}"#)?.unwrap();
+///     assert!(v.is_object());
+///     let v = ajson::parse(r#"{"name": "ajson""#)?.unwrap();
+///     assert!(v.is_object());
+///     let v = ajson::parse(r#"null,"string", 2"#)?.unwrap();
+///     assert!(v.is_null());
+///     Ok(())
+/// }
 /// ```
-pub fn parse(json: &str) -> Option<Value> {
-    let mut getter = Getter::new_from_utf8(json.as_bytes());
-    getter.next_value()
-}
-
-/// Same to [`get`](fn.get.html), but for `io::read`.
-pub fn get_from_read<R>(r: R, path: &str) -> Option<Value>
-where
-    R: io::Read,
-{
-    Getter::new_from_read(r).get(path)
-}
-
-/// Same to [`parse`](fn.parse.html), but for `io::read`.
-pub fn parse_from_read<R>(r: R) -> Option<Value>
-where
-    R: io::Read,
-{
-    let mut getter = Getter::new_from_read(r);
-    getter.next_value()
+pub fn parse(json: &str) -> Result<Option<Value>> {
+    let buf = json.as_bytes();
+    let mut bytes = reader::Bytes::new(buf);
+    Ok(element::read_one(&mut bytes)?.map(|el| el.to_value()))
 }
