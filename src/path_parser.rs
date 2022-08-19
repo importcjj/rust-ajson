@@ -11,7 +11,7 @@ pub(super) fn parse_path(v: &[u8]) -> Result<Path> {
     if v.is_empty() {
         return Ok(Path::empty());
     }
-    // println!("parse path {:?}", String::from_utf8_lossy(v));
+
     let mut bytes = Bytes::new(v);
     let mut current_path = Path::empty();
     let mut depth = 0;
@@ -152,7 +152,7 @@ fn parse_query(v: &[u8]) -> Result<(Query, usize)> {
 
     if op_exist {
         q.set_path(util::trim_space_u8(&v[..op_start]));
-        q.set_op(String::from_utf8_lossy(bytes.slice(op_start, op_end)).to_string());
+        q.set_op(unsafe { std::str::from_utf8_unchecked(bytes.slice(op_start, op_end)) });
     } else if end > 0 {
         q.set_path(util::trim_space_u8(&v[..end + 1]));
     } else {

@@ -15,7 +15,7 @@ pub enum Value<'a> {
     /// Represents a JSON String.
     String(Cow<'a, str>),
     /// Respesents a JSON number.
-    Number(Number),
+    Number(Number<'a>),
     /// Respesents a JSON number.
     Usize(usize),
     /// Respesents a JSON object.

@@ -50,11 +50,9 @@ impl<'a> fmt::Debug for Path<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<Path")?;
         write!(f, " ok={}", self.ok)?;
-        write!(
-            f,
-            " part=`{:?}`",
-            String::from_utf8_lossy(self.part).to_string()
-        )?;
+        write!(f, " part=`{:?}`", unsafe {
+            std::str::from_utf8_unchecked(self.part)
+        })?;
 
         write!(f, " more={}", self.more)?;
         write!(f, " wild={}", self.wild)?;
@@ -195,7 +193,7 @@ pub struct Query<'a> {
     pub on: bool,
     pub path: &'a [u8],
     pub key: Option<Box<Path<'a>>>,
-    pub op: Option<String>,
+    pub op: Option<&'a str>,
     pub value: Option<QueryValue<'a>>,
     pub all: bool,
 }
@@ -206,7 +204,9 @@ impl<'a> fmt::Debug for Query<'a> {
         write!(f, " on={}", self.on)?;
         write!(f, " all={}", self.all)?;
         if !self.path.is_empty() {
-            write!(f, " path=`{}`", String::from_utf8_lossy(self.path))?;
+            write!(f, " path=`{}`", unsafe {
+                std::str::from_utf8_unchecked(self.path)
+            })?;
         }
         if self.key.is_some() {
             write!(f, " key=`{:?}`", self.key.as_ref().unwrap())?;
@@ -261,7 +261,7 @@ impl<'a> Query<'a> {
         self.path = v;
     }
 
-    pub fn set_op(&mut self, op: String) {
+    pub fn set_op(&mut self, op: &'a str) {
         self.op = Some(op);
     }
 
@@ -299,7 +299,7 @@ impl<'a> Query<'a> {
 
         match *target {
             QueryValue::String(q) => match v {
-                Value::String(ref s) => match op.as_str() {
+                Value::String(ref s) => match *op {
                     "==" => s.as_ref() == q,
                     "=" => s == q,
                     "!=" => s != q,
@@ -317,7 +317,7 @@ impl<'a> Query<'a> {
             },
 
             QueryValue::F64(q) => match v {
-                Value::Number(n) => match op.as_str() {
+                Value::Number(n) => match *op {
                     "=" => (n.to_f64() - q).abs() < f64::EPSILON,
                     "==" => (n.to_f64() - q).abs() < f64::EPSILON,
                     "!=" => (n.to_f64() - q).abs() > f64::EPSILON,
@@ -331,7 +331,7 @@ impl<'a> Query<'a> {
             },
 
             QueryValue::Boolean(q) => match v {
-                Value::Boolean(b) => match op.as_str() {
+                Value::Boolean(b) => match *op {
                     "=" => b == q,
                     "==" => b == q,
                     "!=" => b != q,
@@ -340,7 +340,7 @@ impl<'a> Query<'a> {
                 _ => false,
             },
 
-            QueryValue::Null => match op.as_str() {
+            QueryValue::Null => match *op {
                 "=" => v == Value::Null,
                 "==" => v == Value::Null,
                 "!=" => v != Value::Null,
