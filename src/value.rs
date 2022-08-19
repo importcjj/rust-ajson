@@ -1,71 +1,75 @@
-use getter::Getter;
+use crate::parser;
+use crate::path::Path;
+use crate::reader::Bytes;
+use crate::Result;
 use number::Number;
-use std::cmp;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
+use std::fmt::Formatter;
 use std::str;
 
 /// Represents JSON valuue.
-#[derive(PartialEq, Clone)]
-pub enum Value {
+#[derive(PartialEq, Eq, Clone)]
+pub enum Value<'a> {
     /// Represents a JSON String.
-    String(String),
+    String(Cow<'a, str>),
     /// Respesents a JSON number.
-    Number(Number),
+    Number(Number<'a>),
+    /// Respesents a JSON number.
+    Usize(usize),
     /// Respesents a JSON object.
-    Object(String),
+    Object(Cow<'a, str>),
     /// Respesents a JSON array.
-    Array(String),
+    Array(Cow<'a, str>),
     /// Respesents a JSON boolean.
     Boolean(bool),
     /// Respesents a JSON null value.
     Null,
 }
 
-impl fmt::Debug for Value {
+impl<'a> fmt::Debug for Value<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::String(_) => write!(f, r#""{}""#, self.as_str()),
-            _ => write!(f, "{}", self.as_str()),
+            Value::String(s) => write!(f, r#""{}""#, s),
+            Value::Number(n) => write!(f, "{}", n.as_str()),
+            Value::Usize(n) => write!(f, "{}", n),
+            Value::Object(s) | Value::Array(s) => write!(f, "{}", s),
+            Value::Boolean(b) => write!(f, "{}", b),
+            Value::Null => write!(f, "null"),
         }
     }
 }
 
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-impl Value {
+impl<'a> Value<'a> {
     /// Get sub value from a JSON array or map.
     /// About path syntax, see [here](index.html#syntax).
     /// For more detail, see [`get`](fn.get.html).
     /// ```
-    /// use ajson::Value;
-    ///
-    /// let v = Value::Array("[1,2,3]".to_owned());
-    /// let first_num = v.get("0").unwrap();
-    /// assert_eq!(first_num.to_i64(), 1_i64);
+    /// use ajson::{Value, Result};
+    /// fn main() -> Result<()> {
+    ///     let v = Value::Array("[1,2,3]".into());
+    ///     let first_num = v.get("0")?.unwrap();
+    ///     assert_eq!(first_num, 1_i64);
+    ///     Ok(())
+    /// }
     /// ```
-    pub fn get(&self, path: &str) -> Option<Value> {
-        self.get_by_utf8(&path.as_bytes())
-    }
-
-    #[doc(hidden)]
-    pub fn get_by_utf8(&self, v: &[u8]) -> Option<Value> {
+    pub fn get(&self, path: &'a str) -> Result<Option<Value>> {
         match self {
-            Value::Array(s) | Value::Object(s) => Getter::from_str(s).get_by_utf8(v),
-            _ => None,
+            Value::Array(s) | Value::Object(s) => {
+                let mut bytes = Bytes::new(s.as_bytes());
+                let p = Path::parse(path.as_ref())?;
+                Ok(parser::bytes_get(&mut bytes, &p)?.map(|el| el.to_value()))
+            }
+            _ => Ok(None),
         }
     }
 }
 
-impl Value {
-
+impl<'a> Value<'a> {
     /// Returns true if the `Value` is a JSON string.
     /// ```
-    /// let v = ajson::get(r#"{"name":"ajson"}"#, "name").unwrap();
+    /// let v = ajson::get(r#"{"name":"ajson"}"#, "name").unwrap().unwrap();
     /// assert!(v.is_string());
     /// ```
     pub fn is_string(&self) -> bool {
@@ -93,77 +97,170 @@ impl Value {
     }
 }
 
-impl Value {
-    pub fn as_str(&self) -> &str {
-        match &self {
-            Value::String(ref s) => s,
-            Value::Number(number) => number.as_str(),
-            Value::Boolean(true) => "true",
-            Value::Boolean(false) => "false",
-            Value::Object(ref s) => s,
-            Value::Array(ref s) => s,
-            Value::Null => "null",
-        }
-    }
-
-    pub fn to_f64(&self) -> f64 {
+impl<'a> std::fmt::Display for Value<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Value::Number(number) => number.to_f64(),
-            Value::Boolean(true) => 1.0,
-            Value::String(s) => Number::from(s.as_bytes()).to_f64(),
-            _ => 0.0,
+            Value::String(ref s) => write!(f, "{}", s),
+            Value::Number(number) => write!(f, "{}", number.as_str()),
+            Value::Boolean(true) => write!(f, "true"),
+            Value::Boolean(false) => write!(f, "false"),
+            Value::Object(ref s) => write!(f, "{}", s),
+            Value::Array(ref s) => write!(f, "{}", s),
+            Value::Usize(u) => write!(f, "{}", u),
+            Value::Null => write!(f, "null"),
         }
     }
+}
 
-    pub fn to_u64(&self) -> u64 {
+impl<'a> Value<'a> {
+    pub fn as_str(&self) -> Option<&str> {
         match self {
-            Value::Number(number) => number.to_u64(),
-            Value::Boolean(true) => 1,
-            Value::String(s) => Number::from(s.as_bytes()).to_u64(),
-            _ => 0,
+            Value::String(s) => Some(s),
+            _ => None,
         }
     }
 
-    pub fn to_i64(&self) -> i64 {
+    pub fn as_f64(&self) -> Option<f64> {
         match self {
-            Value::Number(number) => number.to_i64(),
-            Value::Boolean(true) => 1,
-            Value::String(ref s) => Number::from(s.as_bytes()).to_i64(),
-            _ => 0,
+            Value::Number(number) => Some(number.to_f64()),
+            Value::Usize(n) => Some(*n as f64),
+            _ => None,
         }
     }
 
-    pub fn to_bool(&self) -> bool {
+    pub fn as_u64(&self) -> Option<u64> {
+        match self {
+            Value::Number(number) => Some(number.to_u64()),
+            Value::Usize(n) => Some(*n as u64),
+            _ => None,
+        }
+    }
+
+    pub fn as_i64(&self) -> Option<i64> {
+        match self {
+            Value::Number(number) => Some(number.to_i64()),
+            Value::Usize(n) => Some(*n as i64),
+            _ => None,
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
         match *self {
-            Value::Boolean(b) => b,
-            _ => false,
+            Value::Boolean(b) => Some(b),
+            _ => None,
         }
     }
 
-    pub fn to_vec(&self) -> Vec<Value> {
+    pub fn as_vec(&self) -> Option<Vec<Value>> {
         match self {
-            Value::Array(s) => Getter::from_str(s).to_vec(),
-            Value::Null => vec![],
-            _ => vec![self.clone()],
+            Value::Array(s) => {
+                let mut bytes = Bytes::new(s.as_bytes());
+                parser::bytes_to_vec(&mut bytes).ok()
+            }
+            _ => None,
         }
     }
 
-    pub fn to_object(&self) -> HashMap<String, Value> {
+    pub fn as_object(&self) -> Option<HashMap<&str, Value>> {
         match self {
-            Value::Object(s) => Getter::from_str(s).to_object(),
-            _ => HashMap::new(),
+            Value::Object(s) => {
+                let mut bytes = Bytes::new(s.as_bytes());
+                parser::bytes_to_map(&mut bytes).ok()
+            }
+            _ => None,
         }
     }
 }
 
-impl<'a> cmp::PartialEq<&'a str> for Value {
+fn eq_f64(value: &Value, other: f64) -> bool {
+    value.as_f64().map_or(false, |i| i == other)
+}
+
+fn eq_i64(value: &Value, other: i64) -> bool {
+    value.as_i64().map_or(false, |i| i == other)
+}
+
+fn eq_u64(value: &Value, other: u64) -> bool {
+    value.as_u64().map_or(false, |i| i == other)
+}
+
+fn eq_bool(value: &Value, other: bool) -> bool {
+    value.as_bool().map_or(false, |i| i == other)
+}
+
+fn eq_str(value: &Value, other: &str) -> bool {
+    value.as_str().map_or(false, |i| i == other)
+}
+
+impl<'a> PartialEq<str> for Value<'a> {
+    fn eq(&self, other: &str) -> bool {
+        eq_str(self, other)
+    }
+}
+
+impl<'a> PartialEq<&'a str> for Value<'a> {
     fn eq(&self, other: &&str) -> bool {
-        self.as_str() == *other
+        eq_str(self, *other)
     }
 }
 
-impl cmp::PartialEq<f64> for Value {
-    fn eq(&self, other: &f64) -> bool {
-        self.to_f64() == *other
+impl<'a> PartialEq<Value<'a>> for str {
+    fn eq(&self, other: &Value) -> bool {
+        eq_str(other, self)
     }
+}
+
+impl<'a> PartialEq<Value<'a>> for &'a str {
+    fn eq(&self, other: &Value) -> bool {
+        eq_str(other, *self)
+    }
+}
+
+impl<'a> PartialEq<String> for Value<'a> {
+    fn eq(&self, other: &String) -> bool {
+        eq_str(self, other.as_str())
+    }
+}
+
+impl<'a> PartialEq<Value<'a>> for String {
+    fn eq(&self, other: &Value) -> bool {
+        eq_str(other, self.as_str())
+    }
+}
+
+macro_rules! partialeq_numeric {
+    ($($eq:ident [$($ty:ty)*])*) => {
+        $($(
+            impl<'a> PartialEq<$ty> for Value<'a> {
+                fn eq(&self, other: &$ty) -> bool {
+                    $eq(self, *other as _)
+                }
+            }
+
+            impl<'a> PartialEq<Value<'a>> for $ty {
+                fn eq(&self, other: &Value) -> bool {
+                    $eq(other, *self as _)
+                }
+            }
+
+            impl<'a> PartialEq<$ty> for &'a Value<'a> {
+                fn eq(&self, other: &$ty) -> bool {
+                    $eq(*self, *other as _)
+                }
+            }
+
+            impl<'a> PartialEq<$ty> for &'a mut Value<'a> {
+                fn eq(&self, other: &$ty) -> bool {
+                    $eq(*self, *other as _)
+                }
+            }
+        )*)*
+    }
+}
+
+partialeq_numeric! {
+    eq_i64[i8 i16 i32 i64 isize]
+    eq_u64[u8 u16 u32 u64 usize]
+    eq_f64[f32 f64]
+    eq_bool[bool]
 }

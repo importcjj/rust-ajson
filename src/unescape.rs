@@ -84,7 +84,7 @@ pub fn unescape(v: &[u8]) -> String {
         i += 1;
     }
 
-    String::from_utf8_lossy(&s).to_string()
+    unsafe { String::from_utf8_unchecked(s) }
 }
 
 fn u8s_to_u32(v: &[u8]) -> u32 {

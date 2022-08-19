@@ -2,9 +2,13 @@ use path_parser;
 use std::fmt;
 use sub_selector::SubSelector;
 
+use crate::element::Element;
+use crate::Result;
 use unescape::unescape;
 use util;
 use value::Value;
+
+#[cfg(feature = "wild")]
 use wild;
 
 static DEFAULT_NONE_QUERY: Query = Query {
@@ -46,11 +50,9 @@ impl<'a> fmt::Debug for Path<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<Path")?;
         write!(f, " ok={}", self.ok)?;
-        write!(
-            f,
-            " part=`{:?}`",
-            String::from_utf8_lossy(self.part).to_string()
-        )?;
+        write!(f, " part=`{:?}`", unsafe {
+            std::str::from_utf8_unchecked(self.part)
+        })?;
 
         write!(f, " more={}", self.more)?;
         write!(f, " wild={}", self.wild)?;
@@ -85,8 +87,8 @@ impl<'a> Path<'a> {
         }
     }
 
-    pub fn new_from_utf8(v: &'a [u8]) -> Path<'a> {
-        path_parser::new_path_from_utf8(v)
+    pub fn parse(v: &'a [u8]) -> Result<Path<'a>> {
+        path_parser::parse_path(v)
     }
 
     pub fn is_match(&self, key: &[u8]) -> bool {
@@ -96,13 +98,13 @@ impl<'a> Path<'a> {
             None
         };
         let key = optional_key.as_ref().map_or(key, |v| v.as_bytes());
-        let eq = if self.wild {
-            wild::is_match_u8(key, self.part)
+        if self.wild {
+            #[cfg(feature = "wild")]
+            return wild::is_match_u8(key, self.part);
+            false
         } else {
             util::equal_escape_u8(key, self.part)
-        };
-
-        eq
+        }
     }
 
     pub fn set_part(&mut self, v: &'a [u8]) {
@@ -117,13 +119,14 @@ impl<'a> Path<'a> {
         self.next = Some(Box::new(next));
     }
 
-    pub fn borrow_next(&self) -> &Path {
+    pub fn borrow_next(&self) -> &Path<'a> {
         match self.next {
             Some(_) => self.next.as_ref().unwrap(),
             None => &DEFAULT_NONE_PATH,
         }
     }
 
+    #[cfg(feature = "wild")]
     pub fn set_wild(&mut self, b: bool) {
         self.wild = b;
     }
@@ -144,7 +147,7 @@ impl<'a> Path<'a> {
         self.query.is_some()
     }
 
-    pub fn borrow_query(&self) -> &Query {
+    pub fn borrow_query(&self) -> &Query<'a> {
         match self.query {
             Some(_) => self.query.as_ref().unwrap(),
             None => &DEFAULT_NONE_QUERY,
@@ -163,7 +166,7 @@ impl<'a> Path<'a> {
         self.selectors.is_some()
     }
 
-    pub fn borrow_selectors(&self) -> &[SubSelector] {
+    pub fn borrow_selectors(&self) -> &[SubSelector<'a>] {
         match self.selectors {
             Some(_) => self.selectors.as_ref().unwrap(),
             None => &[],
@@ -172,15 +175,15 @@ impl<'a> Path<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum QueryValue {
-    String(String),
+pub enum QueryValue<'a> {
+    String(&'a str),
     F64(f64),
     Boolean(bool),
     Null,
     NotExist,
 }
 
-impl QueryValue {
+impl<'a> QueryValue<'a> {
     pub fn exists(&self) -> bool {
         *self != QueryValue::NotExist
     }
@@ -190,8 +193,8 @@ pub struct Query<'a> {
     pub on: bool,
     pub path: &'a [u8],
     pub key: Option<Box<Path<'a>>>,
-    pub op: Option<String>,
-    pub value: Option<QueryValue>,
+    pub op: Option<&'a str>,
+    pub value: Option<QueryValue<'a>>,
     pub all: bool,
 }
 
@@ -200,12 +203,10 @@ impl<'a> fmt::Debug for Query<'a> {
         write!(f, "<Query")?;
         write!(f, " on={}", self.on)?;
         write!(f, " all={}", self.all)?;
-        if self.path.len() > 0 {
-            write!(
-                f,
-                " path=`{}`",
-                String::from_utf8_lossy(self.path).to_string()
-            )?;
+        if !self.path.is_empty() {
+            write!(f, " path=`{}`", unsafe {
+                std::str::from_utf8_unchecked(self.path)
+            })?;
         }
         if self.key.is_some() {
             write!(f, " key=`{:?}`", self.key.as_ref().unwrap())?;
@@ -233,13 +234,13 @@ impl<'a> Query<'a> {
     }
 
     pub fn has_path(&self) -> bool {
-        self.path.len() > 0
+        !self.path.is_empty()
     }
 
-    pub fn get_path(&self) -> Path {
+    pub fn get_path(&self) -> Result<Path> {
         match self.has_path() {
-            true => path_parser::new_path_from_utf8(self.path),
-            false => Path::empty(),
+            true => path_parser::parse_path(self.path),
+            false => Ok(Path::empty()),
         }
     }
 
@@ -260,11 +261,11 @@ impl<'a> Query<'a> {
         self.path = v;
     }
 
-    pub fn set_op(&mut self, op: String) {
+    pub fn set_op(&mut self, op: &'a str) {
         self.op = Some(op);
     }
 
-    pub fn set_val(&mut self, val: QueryValue) {
+    pub fn set_val(&mut self, val: QueryValue<'a>) {
         self.value = Some(val);
     }
 
@@ -283,9 +284,7 @@ impl<'a> Query<'a> {
         self.on = on;
     }
 
-    pub fn is_match(&self, v: &Value) -> bool {
-        // println!("match value {:?} {:?}",self, v);
-
+    pub fn match_element(&self, element: &Element) -> bool {
         if self.value.is_none() {
             return true;
         }
@@ -296,18 +295,21 @@ impl<'a> Query<'a> {
         };
 
         let target = self.value.as_ref().unwrap();
+        let v = element.to_value();
 
-        match target {
+        match *target {
             QueryValue::String(q) => match v {
-                Value::String(s) => match op.as_str() {
-                    "==" => s == q,
+                Value::String(ref s) => match *op {
+                    "==" => s.as_ref() == q,
                     "=" => s == q,
                     "!=" => s != q,
-                    ">" => s > q,
-                    ">=" => s >= q,
-                    "<" => s < q,
-                    "<=" => s <= q,
+                    ">" => s.as_ref() > q,
+                    ">=" => s.as_ref() >= q,
+                    "<" => s.as_ref() < q,
+                    "<=" => s.as_ref() <= q,
+                    #[cfg(feature = "wild")]
                     "%" => wild::is_match(s, q),
+                    #[cfg(feature = "wild")]
                     "!%" => !wild::is_match(s, q),
                     _ => false,
                 },
@@ -315,21 +317,21 @@ impl<'a> Query<'a> {
             },
 
             QueryValue::F64(q) => match v {
-                Value::Number(n) => match op.as_str() {
-                    "=" => (n.to_f64() - *q).abs() < f64::EPSILON,
-                    "==" => (n.to_f64() - *q).abs() < f64::EPSILON,
-                    "!=" => (n.to_f64() - *q).abs() > f64::EPSILON,
-                    "<" => n.to_f64() < *q,
-                    "<=" => n.to_f64() <= *q,
-                    ">" => n.to_f64() > *q,
-                    ">=" => n.to_f64() >= *q,
+                Value::Number(n) => match *op {
+                    "=" => (n.to_f64() - q).abs() < f64::EPSILON,
+                    "==" => (n.to_f64() - q).abs() < f64::EPSILON,
+                    "!=" => (n.to_f64() - q).abs() > f64::EPSILON,
+                    "<" => n.to_f64() < q,
+                    "<=" => n.to_f64() <= q,
+                    ">" => n.to_f64() > q,
+                    ">=" => n.to_f64() >= q,
                     _ => false,
                 },
                 _ => false,
             },
 
             QueryValue::Boolean(q) => match v {
-                Value::Boolean(b) => match op.as_str() {
+                Value::Boolean(b) => match *op {
                     "=" => b == q,
                     "==" => b == q,
                     "!=" => b != q,
@@ -338,10 +340,10 @@ impl<'a> Query<'a> {
                 _ => false,
             },
 
-            QueryValue::Null => match op.as_str() {
-                "=" => *v == Value::Null,
-                "==" => *v == Value::Null,
-                "!=" => *v != Value::Null,
+            QueryValue::Null => match *op {
+                "=" => v == Value::Null,
+                "==" => v == Value::Null,
+                "!=" => v != Value::Null,
                 _ => false,
             },
             _ => false,
