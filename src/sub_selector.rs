@@ -54,7 +54,7 @@ fn last_of_name(v: &[u8]) -> &[u8] {
     v
 }
 
-pub fn parse_selectors<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usize, bool) {
+pub fn parse_selectors(v: &[u8]) -> (Vec<SubSelector>, usize, bool) {
     let mut reader = Bytes::new(v);
     let mut depth = 0;
     let mut start = 0;
@@ -74,7 +74,7 @@ pub fn parse_selectors<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usize, bool) {
                 sels.push(sel);
             }
         }};
-    };
+    }
 
     while let Some(b) = reader.peek() {
         match b {
@@ -82,7 +82,7 @@ pub fn parse_selectors<'a>(v: &'a [u8]) -> (Vec<SubSelector<'a>>, usize, bool) {
                 reader.next();
             }
             b'"' => {
-                element::read_str(&mut reader);
+                element::read_str(&mut reader).unwrap();
 
                 continue;
             }

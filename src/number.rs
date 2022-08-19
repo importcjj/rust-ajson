@@ -8,10 +8,13 @@ const ZERO_UINT: u64 = 0;
 const ZERO_INT: i64 = 0;
 const ZERO_FLOAT: f64 = 0.0;
 const ZERO_FLOAT_F32: f32 = 0.0;
+
+#[allow(dead_code)]
 const ZERO_INT_I32: i32 = 0;
+#[allow(dead_code)]
 const ZERO_INT_U32: u32 = 0;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Number {
     F64(String),
     U64(String),

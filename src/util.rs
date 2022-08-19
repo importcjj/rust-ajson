@@ -58,9 +58,5 @@ pub fn equal_escape_u8(a: &[u8], b: &[u8]) -> bool {
         j += 1;
     }
 
-    if j != b.len() || i != a.len() {
-        false
-    } else {
-        true
-    }
+    !(j != b.len() || i != a.len())
 }

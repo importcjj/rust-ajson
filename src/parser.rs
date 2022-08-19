@@ -162,9 +162,9 @@ fn element_ref_get<'a>(element: &Element<'a>, path: &Path<'a>) -> Result<Option<
     match element {
         Element::Array(buf) | Element::Object(buf) => {
             let mut bytes = Bytes::new(buf);
-            return bytes_get(&mut bytes, path);
+            bytes_get(&mut bytes, path)
         }
-        _ => return Ok(None),
+        _ => Ok(None),
     }
 }
 
@@ -176,7 +176,7 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
     match element {
         Element::Array(buf) | Element::Object(buf) => {
             let mut bytes = Bytes::new(buf);
-            return bytes_get(&mut bytes, path);
+            bytes_get(&mut bytes, path)
         }
         Element::Map(m) => {
             for (key, value) in m.into_iter() {
@@ -188,7 +188,7 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
                 }
             }
 
-            return Ok(None);
+            Ok(None)
         }
         Element::List(elements) => {
             let query = path.borrow_query();
@@ -196,8 +196,8 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
             let query_first = query.on && !query.all;
 
             if query_first {
-                if elements.len() > 0 {
-                    let first = elements.into_iter().nth(0).unwrap();
+                if !elements.is_empty() {
+                    let first = elements.into_iter().next().unwrap();
                     if path.more {
                         return element_get(first, path.borrow_next());
                     }
@@ -220,9 +220,9 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
                 return Ok(Some(Element::List(elements)));
             }
 
-            return Ok(Some(Element::Count(elements.len())));
+            Ok(Some(Element::Count(elements.len())))
         }
-        _ => return Ok(None),
+        _ => Ok(None),
     }
 }
 
@@ -299,10 +299,8 @@ fn array_bytes_get<'a>(bytes: &mut Bytes<'a>, path: &Path<'a>) -> Result<Option<
                         }
                     }
                 }
-            } else {
-                if !query.match_element(&element) {
-                    continue;
-                }
+            } else if !query.match_element(&element) {
+                continue;
             }
         }
 

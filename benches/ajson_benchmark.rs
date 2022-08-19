@@ -17,7 +17,7 @@ use json::JsonValue;
 use serde_json::Value;
 
 #[allow(dead_code)]
-static BENCH_DATA: &'static str = r#"{
+static BENCH_DATA: &str = r#"{
     "overflow": 9223372036854775808,
     "widget": {
         "debug": "on",
@@ -256,22 +256,19 @@ fn serde_json_derive_bench(json: &str) {
 }
 
 fn nom_json_bench(json: &str) {
-    match nom_json::root::<(&str, ErrorKind)>(json) {
-        Ok((_, value)) => {
-            black_box(&value["widget"]["window"]["name"].as_str());
-            black_box(&value["widget"]["image"]["hOffset"]);
-            black_box(&value["widget"]["text"]["onMouseUp"].as_str());
-            black_box(&value["widget"]["debug"].as_str());
+    if let Ok((_, value)) = nom_json::root::<(&str, ErrorKind)>(json) {
+        black_box(&value["widget"]["window"]["name"].as_str());
+        black_box(&value["widget"]["image"]["hOffset"]);
+        black_box(&value["widget"]["text"]["onMouseUp"].as_str());
+        black_box(&value["widget"]["debug"].as_str());
 
-            let menu = &value["widget"]["menu"];
-            let _v: Vec<&nom_json::JsonValue> = black_box(
-                menu.members()
-                    .filter(|x| x["sub_item"].to_f64() > 5.0)
-                    .map(|x| &x["title"])
-                    .collect(),
-            );
-        }
-        _ => (),
+        let menu = &value["widget"]["menu"];
+        let _v: Vec<&nom_json::JsonValue> = black_box(
+            menu.members()
+                .filter(|x| x["sub_item"].to_f64() > 5.0)
+                .map(|x| &x["title"])
+                .collect(),
+        );
     };
 }
 

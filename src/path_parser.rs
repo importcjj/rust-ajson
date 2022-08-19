@@ -156,7 +156,7 @@ fn parse_query(v: &[u8]) -> Result<(Query, usize)> {
     } else if end > 0 {
         q.set_path(util::trim_space_u8(&v[..end + 1]));
     } else {
-        q.set_path(util::trim_space_u8(&v[..]));
+        q.set_path(util::trim_space_u8(v));
     }
 
     Ok((q, bytes.offset()))
@@ -168,15 +168,15 @@ fn parser_query_value(v: &[u8]) -> Result<(QueryValue, usize)> {
     if let Some(b) = bytes.peek() {
         let value = match b {
             b't' => {
-                element::read_true(&mut bytes);
+                element::read_true(&mut bytes).unwrap();
                 QueryValue::Boolean(true)
             }
             b'f' => {
-                element::read_false(&mut bytes);
+                element::read_false(&mut bytes).unwrap();
                 QueryValue::Boolean(false)
             }
             b'n' => {
-                element::read_null(&mut bytes);
+                element::read_null(&mut bytes).unwrap();
                 QueryValue::Null
             }
             b'"' => {
@@ -215,52 +215,52 @@ mod tests {
 
     #[test]
     fn test_invalid_path() {
-        parse_path("friends.{}first]".as_bytes());
+        parse_path("friends.{}first]".as_bytes()).unwrap();
     }
 
     #[test]
     fn test_fn_parse_path_from_utf8() {
         let v = r#"name"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
 
         let v = r#"#(last=="Murphy")#.first"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
 
         let v = r#"friends.#(first!%"D*")#.last"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
 
         let v = r#"c?ildren.0"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
 
         let v = r#"#(sub_item>7)#.title"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
         let v = r#"friends.#(nets."#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
 
         let v = r#"friends.#()#"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
 
         let v = "widget.[window,name].#.name".as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
 
         let v = r#"widget.menu.#(title="help")#.title"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
     }
@@ -268,27 +268,27 @@ mod tests {
     #[test]
     fn test_fn_parse_path() {
         let v = r#"name"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
 
         let v = r#"#(last=="Murphy")#.first"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
 
         let v = r#"friends.#(first!%"D*")#.last"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
 
         let v = r#"c?ildren.0"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
 
         let v = r#"#(sub_item>7)#.title"#.as_bytes();
-        let p = parse_path(&v);
+        let p = parse_path(v);
         println!("{:?}", p);
         println!("======================");
     }
@@ -296,42 +296,42 @@ mod tests {
     #[test]
     fn test_fn_parse_query() {
         let v = "first)".as_bytes();
-        let q = new_query_from_utf8(&v);
+        let q = new_query_from_utf8(v);
         println!("{:?}", q);
         println!("======================");
 
         let v = "first)#".as_bytes();
-        let q = new_query_from_utf8(&v);
+        let q = new_query_from_utf8(v);
         println!("{:?}", q);
         println!("======================");
 
         let v = r#"first="name")"#.as_bytes();
-        let q = new_query_from_utf8(&v);
+        let q = new_query_from_utf8(v);
         println!("{:?}", q);
         println!("======================");
 
         let v = r#"nets.#(=="ig"))"#.as_bytes();
-        let q = new_query_from_utf8(&v);
+        let q = new_query_from_utf8(v);
         println!("{:?}", q);
         println!("======================");
 
         let v = r#"nets.#(=="ig"))#"#.as_bytes();
-        let q = new_query_from_utf8(&v);
+        let q = new_query_from_utf8(v);
         println!("{:?}", q);
         println!("======================");
 
         let v = r#"=="ig")"#.as_bytes();
-        let q = new_query_from_utf8(&v);
+        let q = new_query_from_utf8(v);
         println!("{:?}", q);
         println!("======================");
 
         let v = r#"first=)"#.as_bytes();
-        let q = new_query_from_utf8(&v);
+        let q = new_query_from_utf8(v);
         println!("{:?}", q);
         println!("======================");
 
         let v = r#"sub_item>7)#.title"#.as_bytes();
-        let q = new_query_from_utf8(&v);
+        let q = new_query_from_utf8(v);
         println!("{:?}", q);
         println!("======================");
     }

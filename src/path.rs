@@ -100,15 +100,13 @@ impl<'a> Path<'a> {
             None
         };
         let key = optional_key.as_ref().map_or(key, |v| v.as_bytes());
-        let eq = if self.wild {
+        if self.wild {
             #[cfg(feature = "wild")]
             return wild::is_match_u8(key, self.part);
             false
         } else {
             util::equal_escape_u8(key, self.part)
-        };
-
-        eq
+        }
     }
 
     pub fn set_part(&mut self, v: &'a [u8]) {
@@ -207,12 +205,8 @@ impl<'a> fmt::Debug for Query<'a> {
         write!(f, "<Query")?;
         write!(f, " on={}", self.on)?;
         write!(f, " all={}", self.all)?;
-        if self.path.len() > 0 {
-            write!(
-                f,
-                " path=`{}`",
-                String::from_utf8_lossy(self.path).to_string()
-            )?;
+        if !self.path.is_empty() {
+            write!(f, " path=`{}`", String::from_utf8_lossy(self.path))?;
         }
         if self.key.is_some() {
             write!(f, " key=`{:?}`", self.key.as_ref().unwrap())?;
@@ -240,7 +234,7 @@ impl<'a> Query<'a> {
     }
 
     pub fn has_path(&self) -> bool {
-        self.path.len() > 0
+        !self.path.is_empty()
     }
 
     pub fn get_path(&self) -> Result<Path> {

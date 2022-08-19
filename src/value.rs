@@ -1,18 +1,16 @@
 use crate::parser;
 use crate::path::Path;
 use crate::reader::Bytes;
-use crate::Error;
 use crate::Result;
 use number::Number;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
-use std::result;
+use std::fmt::Formatter;
 use std::str;
-use std::str::FromStr;
 
 /// Represents JSON valuue.
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum Value<'a> {
     /// Represents a JSON String.
     String(Cow<'a, str>),
@@ -34,19 +32,6 @@ impl<'a> fmt::Debug for Value<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::String(s) => write!(f, r#""{}""#, s),
-            Value::Number(n) => write!(f, "{}", n.as_str()),
-            Value::Usize(n) => write!(f, "{}", n),
-            Value::Object(s) | Value::Array(s) => write!(f, "{}", s),
-            Value::Boolean(b) => write!(f, "{}", b),
-            Value::Null => write!(f, "null"),
-        }
-    }
-}
-
-impl<'a> fmt::Display for Value<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Value::String(s) => write!(f, r#"{}"#, s),
             Value::Number(n) => write!(f, "{}", n.as_str()),
             Value::Usize(n) => write!(f, "{}", n),
             Value::Object(s) | Value::Array(s) => write!(f, "{}", s),
@@ -112,20 +97,22 @@ impl<'a> Value<'a> {
     }
 }
 
-impl<'a> Value<'a> {
-    pub fn to_string(&self) -> String {
+impl<'a> std::fmt::Display for Value<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Value::String(ref s) => s.to_string(),
-            Value::Number(number) => number.as_str().to_string(),
-            Value::Boolean(true) => "true".to_string(),
-            Value::Boolean(false) => "false".to_string(),
-            Value::Object(ref s) => s.to_string(),
-            Value::Array(ref s) => s.to_string(),
-            Value::Usize(u) => u.to_string(),
-            Value::Null => "null".to_string(),
+            Value::String(ref s) => write!(f, "{}", s),
+            Value::Number(number) => write!(f, "{}", number.as_str()),
+            Value::Boolean(true) => write!(f, "true"),
+            Value::Boolean(false) => write!(f, "false"),
+            Value::Object(ref s) => write!(f, "{}", s),
+            Value::Array(ref s) => write!(f, "{}", s),
+            Value::Usize(u) => write!(f, "{}", u),
+            Value::Null => write!(f, "null"),
         }
     }
+}
 
+impl<'a> Value<'a> {
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Value::String(s) => Some(s),
