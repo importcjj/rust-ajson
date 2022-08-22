@@ -149,7 +149,7 @@ pub fn read_json_range(bytes: &mut Bytes) -> Result<(usize, usize)> {
             }
             b'"' => {
                 let (_, end) = read_str_range(bytes)?;
-                bytes.seek(end);
+                bytes.seek(end+1);
             }
             b'[' | b'{' => depth += 1,
             b']' | b'}' => {

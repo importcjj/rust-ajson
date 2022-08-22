@@ -126,7 +126,7 @@ fn select_to_object<'a>(
 
     for sel in sels {
         let path = Path::parse(sel.path)?;
-        bytes.seek(start);
+        bytes.seek(start+1);
         if let Some(sub_pv) = bytes_get(bytes, &path)? {
             let key = unsafe { str::from_utf8_unchecked(sel.name) };
             map.insert(key, sub_pv);
@@ -145,7 +145,7 @@ fn select_to_array<'a>(
 
     for sel in sels {
         let path = Path::parse(sel.path)?;
-        bytes.seek(start);
+        bytes.seek(start+1);
         if let Some(sub_pv) = bytes_get(bytes, &path)? {
             list.push(sub_pv)
         }

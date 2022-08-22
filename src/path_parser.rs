@@ -197,7 +197,7 @@ fn parser_query_value(v: &[u8]) -> Result<(QueryValue, usize)> {
             _ => QueryValue::NotExist,
         };
 
-        return Ok((value, bytes.offset() - 1));
+        return Ok((value, bytes.offset()));
     }
 
     Ok((QueryValue::NotExist, 0))

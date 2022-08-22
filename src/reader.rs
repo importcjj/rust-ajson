@@ -2,7 +2,6 @@ pub struct Bytes<'a> {
     buffer: &'a [u8],
     offset: usize,
     max_offset: usize,
-    overflow: bool,
 }
 
 impl<'a> Bytes<'a> {
@@ -11,13 +10,19 @@ impl<'a> Bytes<'a> {
             buffer: source,
             offset: 0,
             max_offset: source.len(),
-            overflow: false,
         }
     }
 
+
+    #[inline]
+    fn overflow(&self) -> bool {
+        self.offset == self.max_offset
+    }
+    
+
     // dangerous!!
     pub fn tail<'b>(&self, v: &'b [u8]) -> &'b [u8] {
-        if self.overflow {
+        if self.overflow() {
             return &[];
         }
         &v[self.position()..]
@@ -35,59 +40,43 @@ impl<'a> Bytes<'a> {
 
 impl<'a> Bytes<'a> {
     pub fn position(&self) -> usize {
-        if !self.started() {
-            0
-        } else {
-            self.offset - 1
-        }
+        self.offset
     }
 
     pub fn offset(&self) -> usize {
         self.offset
     }
 
-    pub fn started(&self) -> bool {
-        self.offset > 0
-    }
 
     pub fn next(&mut self) -> Option<u8> {
-        if self.overflow {
+        if self.overflow() {
             return None;
         }
-
-        if self.offset == self.max_offset {
-            self.overflow = true;
-            return None;
-        }
-
-        let b = self.buffer[self.offset];
+        
         self.offset += 1;
+        let b =  unsafe { *self.buffer.get_unchecked(self.offset)   };
+        
         Some(b)
     }
 
     pub fn peek(&mut self) -> Option<u8> {
-        if self.overflow {
+        if self.overflow() {
             return None;
         }
 
-        if !self.started() {
-            self.next()
-        } else {
-            Some(self.buffer[self.offset - 1])
-        }
+        unsafe { Some(*self.buffer.get_unchecked(self.offset)) }
     }
 
     pub fn seek(&mut self, new: usize) {
         if new < self.max_offset {
-            self.offset = new + 1;
-            self.overflow = false;
+            self.offset = new;
         } else {
             self.offset = self.max_offset;
         }
     }
 
     pub fn slice(&self, start: usize, end: usize) -> &'a [u8] {
-        &self.buffer[start..end + 1]
+        unsafe { self.buffer.get_unchecked(start..end + 1) }
     }
 
     pub fn back(&mut self, offset: usize) {
