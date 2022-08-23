@@ -106,7 +106,7 @@ impl<'a> Element<'a> {
 
                 buffer.push(']');
             }
-            _ => unreachable!(),
+            _ => (),
         }
     }
 }
@@ -148,8 +148,7 @@ pub fn read_json_range(bytes: &mut Bytes) -> Result<(usize, usize)> {
                 bytes.next();
             }
             b'"' => {
-                let (_, end) = read_str_range(bytes)?;
-                bytes.seek(end+1);
+                read_str_range(bytes)?;
             }
             b'[' | b'{' => depth += 1,
             b']' | b'}' => {
@@ -163,7 +162,6 @@ pub fn read_json_range(bytes: &mut Bytes) -> Result<(usize, usize)> {
     }
 
     let end = bytes.position();
-    bytes.next();
     Ok((start, end))
 }
 
@@ -198,11 +196,11 @@ pub fn read_str_range(bytes: &mut Bytes) -> Result<(usize, usize)> {
             _ => (),
         }
     }
+
     let mut end = bytes.position();
     if !ok {
         end += 1;
     }
-    bytes.next();
     Ok((start, end))
 }
 
@@ -216,7 +214,7 @@ pub fn read_number<'a>(bytes: &mut Bytes<'a>) -> Result<Element<'a>> {
         };
     }
 
-    Ok(Element::Number(bytes.slice(start, bytes.position())))
+    Ok(Element::Number(bytes.slice(start, bytes.position() - 1)))
 }
 
 pub fn read_one<'a>(bytes: &mut Bytes<'a>) -> Result<Option<Element<'a>>> {
@@ -228,13 +226,20 @@ pub fn read_one<'a>(bytes: &mut Bytes<'a>) -> Result<Option<Element<'a>>> {
             b'n' => read_null(bytes)?,
             b'{' => read_object(bytes)?,
             b'[' => read_array(bytes)?,
-            b'0'..=b'9' | b'-' | b'.' => read_number(bytes)?,
+            b'0'..=b'9' | b'-' | b'.' => {
+                let n = read_number(bytes)?;
+                return Ok(Some(n));
+            }
             b'}' | b']' => return Ok(None),
             _ => {
                 bytes.next();
                 continue;
             }
         };
+
+        bytes.next();
+
+        let v = value.to_value();
 
         return Ok(Some(value));
     }

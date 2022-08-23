@@ -13,14 +13,13 @@ impl<'a> Bytes<'a> {
         }
     }
 
-
     #[inline]
     fn overflow(&self) -> bool {
         self.offset == self.max_offset
     }
-    
 
     // dangerous!!
+    #[inline]
     pub fn tail<'b>(&self, v: &'b [u8]) -> &'b [u8] {
         if self.overflow() {
             return &[];
@@ -28,10 +27,11 @@ impl<'a> Bytes<'a> {
         &v[self.position()..]
     }
 
+    #[inline]
     pub fn head<'b>(&self, v: &'b [u8], end: usize) -> &'b [u8] {
         &v[..end + 1]
     }
-
+    #[inline]
     pub fn forward(&mut self, offset: usize) {
         let prev = self.position();
         self.seek(prev + offset);
@@ -39,26 +39,29 @@ impl<'a> Bytes<'a> {
 }
 
 impl<'a> Bytes<'a> {
+    #[inline]
     pub fn position(&self) -> usize {
         self.offset
     }
 
+    #[inline]
     pub fn offset(&self) -> usize {
         self.offset
     }
 
-
+    #[inline]
     pub fn next(&mut self) -> Option<u8> {
         if self.overflow() {
             return None;
         }
-        
+
         self.offset += 1;
-        let b =  unsafe { *self.buffer.get_unchecked(self.offset)   };
-        
+        let b = unsafe { *self.buffer.get_unchecked(self.offset) };
+
         Some(b)
     }
 
+    #[inline]
     pub fn peek(&mut self) -> Option<u8> {
         if self.overflow() {
             return None;
@@ -67,6 +70,7 @@ impl<'a> Bytes<'a> {
         unsafe { Some(*self.buffer.get_unchecked(self.offset)) }
     }
 
+    #[inline]
     pub fn seek(&mut self, new: usize) {
         if new < self.max_offset {
             self.offset = new;
@@ -75,16 +79,8 @@ impl<'a> Bytes<'a> {
         }
     }
 
+    #[inline]
     pub fn slice(&self, start: usize, end: usize) -> &'a [u8] {
         unsafe { self.buffer.get_unchecked(start..end + 1) }
-    }
-
-    pub fn back(&mut self, offset: usize) {
-        if self.position() >= offset {
-            let prev = self.position();
-            self.seek(prev - offset);
-        } else {
-            self.seek(0);
-        }
     }
 }

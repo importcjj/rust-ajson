@@ -26,6 +26,7 @@ json = "0.11.13"
 serde_json = "1.0"
 serde = { version = "1.0.98", features = ["derive"] }
 nom = "5"
+gjson = "0.8.1"
 
 [[bench]]
 name = "ajson_benchmark"

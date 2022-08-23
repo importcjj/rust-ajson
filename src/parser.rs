@@ -35,7 +35,6 @@ pub fn bytes_to_map<'a>(bytes: &mut Bytes<'a>) -> Result<HashMap<&'a str, Value<
     let mut m = HashMap::new();
     let mut key_cache: Option<&str> = None;
     let mut count = 0;
-    #[allow(unused_assignments)]
     let mut is_map = false;
     'outer: while let Some(b) = bytes.peek() {
         if let b'{' = b {
@@ -99,11 +98,9 @@ pub fn bytes_get<'a>(bytes: &mut Bytes<'a>, path: &Path<'a>) -> Result<Option<El
     while let Some(b) = bytes.peek() {
         match b {
             b'{' => {
-                bytes.next();
                 return object_bytes_get(bytes, path);
             }
             b'[' => {
-                bytes.next();
                 return array_bytes_get(bytes, path);
             }
 
@@ -126,7 +123,7 @@ fn select_to_object<'a>(
 
     for sel in sels {
         let path = Path::parse(sel.path)?;
-        bytes.seek(start+1);
+        bytes.seek(start + 1);
         if let Some(sub_pv) = bytes_get(bytes, &path)? {
             let key = unsafe { str::from_utf8_unchecked(sel.name) };
             map.insert(key, sub_pv);
@@ -145,7 +142,7 @@ fn select_to_array<'a>(
 
     for sel in sels {
         let path = Path::parse(sel.path)?;
-        bytes.seek(start+1);
+        bytes.seek(start + 1);
         if let Some(sub_pv) = bytes_get(bytes, &path)? {
             list.push(sub_pv)
         }
@@ -227,6 +224,8 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
 }
 
 fn object_bytes_get<'a>(bytes: &mut Bytes<'a>, path: &Path<'a>) -> Result<Option<Element<'a>>> {
+    bytes.next();
+
     let mut num = 0;
     loop {
         let element = element::read_one(bytes)?;
@@ -272,6 +271,8 @@ fn array_bytes_get<'a>(bytes: &mut Bytes<'a>, path: &Path<'a>) -> Result<Option<
     let mut elements = vec![];
     let return_list = (query.on && query.all) || (!query.on && path.more);
     let only_first = query.on && !query.all;
+
+    bytes.next();
 
     loop {
         // index matched

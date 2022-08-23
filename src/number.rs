@@ -44,20 +44,17 @@ impl<'a> From<&mut Bytes<'a>> for Number<'a> {
         };
 
         let mut float = false;
-        let mut end = 0;
 
         while let Some(b) = r.next() {
             match b {
                 b'0'..=b'9' => (),
                 b'.' => float = true,
                 _ => {
-                    end = r.position() - 1;
                     break;
                 }
             };
-
-            end = r.position();
         }
+        let end = r.position() - 1;
 
         let s = unsafe { std::str::from_utf8_unchecked(r.slice(start, end)) };
         if float {
@@ -80,7 +77,6 @@ impl<'a> Number<'a> {
     }
 
     pub fn to_f64(&self) -> f64 {
-        // println!("{:?}", self);
         match self {
             Number::F64(s) => s.parse().unwrap_or(ZERO_FLOAT),
             Number::U64(s) => s.parse().unwrap_or(ZERO_FLOAT),
@@ -89,7 +85,6 @@ impl<'a> Number<'a> {
     }
 
     pub fn to_f32(&self) -> f32 {
-        // println!("{:?}", self);
         match self {
             Number::F64(s) => s.parse().unwrap_or(ZERO_FLOAT_F32),
             Number::U64(s) => s.parse().unwrap_or(ZERO_FLOAT_F32),
@@ -98,7 +93,6 @@ impl<'a> Number<'a> {
     }
 
     pub fn to_u64(&self) -> u64 {
-        // println!("{:?}", self);
         match self {
             Number::F64(s) => {
                 f64_to_u64(self.to_f64()).unwrap_or_else(|| parse_uint_lossy(s.as_bytes()))
@@ -109,7 +103,6 @@ impl<'a> Number<'a> {
     }
 
     pub fn to_i64(&self) -> i64 {
-        // println!("{:?}", self);
         match self {
             Number::F64(s) => {
                 f64_to_i64(self.to_f64()).unwrap_or_else(|| parse_int_lossy(s.as_bytes()))

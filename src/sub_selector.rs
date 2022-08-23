@@ -130,14 +130,8 @@ mod tests {
     fn test_parse_selectors_from_utf8() {
         let path = r#"{name.first,age,murphys:friends.#(last="Murphy")#.first}"#;
         let (sels, length, ok) = parse_selectors(path.as_bytes());
-        println!("length {}", length);
-        println!("ok {}", ok);
-        println!("sels {:?}", sels);
 
         let path = r#"[name,a]"#;
         let (sels, length, ok) = parse_selectors(path.as_bytes());
-        println!("length {}", length);
-        println!("ok {}", ok);
-        println!("sels {:?}", sels);
     }
 }
