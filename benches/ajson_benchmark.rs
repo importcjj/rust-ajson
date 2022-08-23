@@ -82,7 +82,9 @@ fn ajson_path_bench() {
     black_box(ajson::Path::parse("widget.image.hOffset".as_bytes()));
     black_box(ajson::Path::parse("widget.text.onMouseUp".as_bytes()));
     black_box(ajson::Path::parse("widget.debug".as_bytes()));
-    black_box(ajson::Path::parse("widget.menu.#(sub_item>7)#.title".as_bytes()));
+    black_box(ajson::Path::parse(
+        "widget.menu.#(sub_item>7)#.title".as_bytes(),
+    ));
 }
 
 fn ajson_bench(json: &str) {
@@ -322,17 +324,15 @@ fn serde_json_derive_multi_query(json: &str) {
 fn criterion_benchmark(c: &mut Criterion) {
     // c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
 
-    c.bench_function("ajson path benchmark", |b| {
-        b.iter(ajson_path_bench)
-    });
+    // c.bench_function("ajson path benchmark", |b| b.iter(ajson_path_bench));
 
     c.bench_function("ajson benchmark", |b| {
         b.iter(|| ajson_bench(black_box(BENCH_DATA)))
     });
 
-    // c.bench_function("gjson benchmark", |b| {
-    //     b.iter(|| gjson_bench(black_box(BENCH_DATA)))
-    // });
+    c.bench_function("gjson benchmark", |b| {
+        b.iter(|| gjson_bench(black_box(BENCH_DATA)))
+    });
 
     // c.bench_function("serde_json benchmark", |b| {
     //     b.iter(|| serde_json_bench(black_box(BENCH_DATA)))

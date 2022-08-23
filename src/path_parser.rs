@@ -212,6 +212,7 @@ fn new_query_from_utf8(v: &[u8]) -> Result<Query> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(unused_variables)]
     use super::*;
 
     #[test]

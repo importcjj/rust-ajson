@@ -1,4 +1,4 @@
-use crate::reader::Bytes;
+use crate::reader::{Bytes, ReaderAction};
 use crate::unescape;
 use crate::value::Value;
 use crate::Number;
@@ -142,26 +142,28 @@ pub fn read_json_range(bytes: &mut Bytes) -> Result<(usize, usize)> {
     let mut depth = 1;
     let start = bytes.position();
 
-    while let Some(b) = bytes.next() {
+    bytes.next_byte(|reader, b| {
         match b {
-            b'\\' => {
-                bytes.next();
-            }
+            b'\\' => return ReaderAction::Skip(1),
             b'"' => {
-                read_str_range(bytes)?;
+                let (_, end) = read_str_range(reader).unwrap();
+                return ReaderAction::Seek(end);
             }
             b'[' | b'{' => depth += 1,
             b']' | b'}' => {
                 depth -= 1;
                 if depth == 0 {
-                    break;
+                    return ReaderAction::Break;
                 }
             }
             _ => (),
         }
-    }
+
+        ReaderAction::Continue
+    });
 
     let end = bytes.position();
+    
     Ok((start, end))
 }
 
@@ -184,18 +186,14 @@ pub fn read_str_range(bytes: &mut Bytes) -> Result<(usize, usize)> {
     let start = bytes.position();
 
     let mut ok = false;
-    while let Some(b) = bytes.next() {
-        match b {
-            b'"' => {
-                ok = true;
-                break;
-            }
-            b'\\' => {
-                bytes.next();
-            }
-            _ => (),
+    bytes.next_byte(|reader, b| match b {
+        b'"' => {
+            ok = true;
+            ReaderAction::Break
         }
-    }
+        b'\\' => ReaderAction::Skip(1),
+        _ => ReaderAction::Continue,
+    });
 
     let mut end = bytes.position();
     if !ok {

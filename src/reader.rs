@@ -13,13 +13,13 @@ impl<'a> Bytes<'a> {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn overflow(&self) -> bool {
         self.offset == self.max_offset
     }
 
     // dangerous!!
-    #[inline]
+    #[inline(always)]
     pub fn tail<'b>(&self, v: &'b [u8]) -> &'b [u8] {
         if self.overflow() {
             return &[];
@@ -27,29 +27,78 @@ impl<'a> Bytes<'a> {
         &v[self.position()..]
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn head<'b>(&self, v: &'b [u8], end: usize) -> &'b [u8] {
         &v[..end + 1]
     }
-    #[inline]
+
+    #[inline(always)]
     pub fn forward(&mut self, offset: usize) {
         let prev = self.position();
         self.seek(prev + offset);
     }
 }
 
+pub enum ReaderAction {
+    Break,
+    Skip(usize),
+    Seek(usize),
+    Continue,
+}
+
 impl<'a> Bytes<'a> {
     #[inline]
+    pub fn next_byte<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut Self, u8) -> ReaderAction,
+    {
+        const CHUNK: usize = 8;
+        'chunk: loop {
+            if self.offset + CHUNK < self.max_offset {
+                for _ in 0..CHUNK {
+                    self.offset += 1;
+                    let b = unsafe { *self.buffer.get_unchecked(self.offset) };
+                    match f(self, b) {
+                        ReaderAction::Break => return,
+                        ReaderAction::Skip(skip_n) => {
+                            self.forward(skip_n);
+                            continue 'chunk;
+                        }
+                        ReaderAction::Seek(n) => {
+                            self.seek(n);
+                            continue 'chunk;
+                        }
+                        ReaderAction::Continue => (),
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+
+        while let Some(b) = self.next() {
+            match f(self, b) {
+                ReaderAction::Break => return,
+                ReaderAction::Skip(skip_n) => self.forward(skip_n),
+                ReaderAction::Seek(n) => self.seek(n),
+                ReaderAction::Continue => (),
+            }
+        }
+    }
+}
+
+impl<'a> Bytes<'a> {
+    #[inline(always)]
     pub fn position(&self) -> usize {
         self.offset
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn offset(&self) -> usize {
         self.offset
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn next(&mut self) -> Option<u8> {
         if self.overflow() {
             return None;
@@ -61,7 +110,7 @@ impl<'a> Bytes<'a> {
         Some(b)
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn peek(&mut self) -> Option<u8> {
         if self.overflow() {
             return None;
@@ -70,7 +119,7 @@ impl<'a> Bytes<'a> {
         unsafe { Some(*self.buffer.get_unchecked(self.offset)) }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn seek(&mut self, new: usize) {
         if new < self.max_offset {
             self.offset = new;
@@ -79,7 +128,7 @@ impl<'a> Bytes<'a> {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn slice(&self, start: usize, end: usize) -> &'a [u8] {
         unsafe { self.buffer.get_unchecked(start..end + 1) }
     }
