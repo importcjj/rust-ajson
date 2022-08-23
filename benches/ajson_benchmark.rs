@@ -108,12 +108,12 @@ fn ajson_bench(json: &str) {
     );
     black_box(ajson::get(json, "widget.debug").unwrap().unwrap().as_str());
     // ajson::get(json, "widget.text").as_map();
-    black_box(
-        ajson::get(json, "widget.menu.#(sub_item>7)#.title")
-            .unwrap()
-            .unwrap()
-            .as_vec(),
-    );
+    // black_box(
+    //     ajson::get(json, "widget.menu.#(sub_item>7)#.title")
+    //         .unwrap()
+    //         .unwrap()
+    //         .as_vec(),
+    // );
     // ajson::get(json, "widget.menu.[1.title,2.options]").as_array();
 }
 
@@ -134,7 +134,7 @@ fn gjson_bench(json: &str) {
     black_box(gjson::get(json, "widget.text.onMouseUp").str());
     black_box(gjson::get(json, "widget.debug").str());
     // ajson::get(json, "widget.text").as_map();
-    black_box(gjson::get(json, "widget.menu.#(sub_item>7)#.title").array());
+    // black_box(gjson::get(json, "widget.menu.#(sub_item>7)#.title").array());
     // gjson::get(json, "widget.menu.[1.title,2.options]").as_array();
 }
 
@@ -279,13 +279,32 @@ fn serde_json_derive_bench(json: &str) {
 }
 
 fn nom_json_bench(json: &str) {
-    match nom_json::root::<(&str, ErrorKind)>(json) {
-        Ok((_, value)) => {
-            black_box(&value["widget"]["window"]["name"].as_str());
-            black_box(&value["widget"]["image"]["hOffset"]);
-            black_box(&value["widget"]["text"]["onMouseUp"].as_str());
-            black_box(&value["widget"]["debug"].as_str());
+    black_box({
+        nom_json::root::<(&str, ErrorKind)>(json).map(|(_, value)| {
+            value["widget"]["window"]["name"].as_str();
+        });
+    });
 
+    black_box({
+        nom_json::root::<(&str, ErrorKind)>(json).map(|(_, value)| {
+            &value["widget"]["image"]["hOffset"];
+        });
+    });
+
+    black_box({
+        nom_json::root::<(&str, ErrorKind)>(json).map(|(_, value)| {
+            value["widget"]["text"]["onMouseUp"].as_str();
+        });
+    });
+
+    black_box({
+        nom_json::root::<(&str, ErrorKind)>(json).map(|(_, value)| {
+            value["widget"]["debug"].as_str();
+        });
+    });
+
+    black_box({
+        nom_json::root::<(&str, ErrorKind)>(json).map(|(_, value)| {
             let menu = &value["widget"]["menu"];
             let _v: Vec<&nom_json::JsonValue> = black_box(
                 menu.members()
@@ -293,9 +312,8 @@ fn nom_json_bench(json: &str) {
                     .map(|x| &x["title"])
                     .collect(),
             );
-        }
-        _ => (),
-    };
+        });
+    });
 }
 
 fn serde_json_derive_multi_query(json: &str) {
@@ -330,9 +348,9 @@ fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| ajson_bench(black_box(BENCH_DATA)))
     });
 
-    c.bench_function("gjson benchmark", |b| {
+    /*     c.bench_function("gjson benchmark", |b| {
         b.iter(|| gjson_bench(black_box(BENCH_DATA)))
-    });
+    }); */
 
     // c.bench_function("serde_json benchmark", |b| {
     //     b.iter(|| serde_json_bench(black_box(BENCH_DATA)))
@@ -365,9 +383,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     //     b.iter(|| serde_json_derive_multi_query(black_box(BENCH_DATA)))
     // });
 
-    // c.bench_function("nom json bench", |b| {
-    //     b.iter(|| nom_json_bench(black_box(BENCH_DATA)))
-    // });
+    c.bench_function("nom json bench", |b| {
+        b.iter(|| nom_json_bench(black_box(BENCH_DATA)))
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);

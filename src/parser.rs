@@ -57,7 +57,7 @@ pub fn bytes_to_map(mut input: &str) -> Result<HashMap<&str, Value>> {
     }
 
     if i == bytes.len() - 1 {
-        return Ok(m)
+        return Ok(m);
     }
 
     if i >= bytes.len() {
@@ -75,7 +75,6 @@ pub fn bytes_to_map(mut input: &str) -> Result<HashMap<&str, Value>> {
                 if count % 2 == 1 {
                     match element {
                         Element::String(s) => {
-                            
                             key_cache = Some(&s[1..s.len() - 1]);
                         }
                         _ => return Err(Error::ObjectKey),
@@ -87,7 +86,6 @@ pub fn bytes_to_map(mut input: &str) -> Result<HashMap<&str, Value>> {
             None => break,
         }
     }
-
 
     Ok(m)
 }
@@ -123,10 +121,12 @@ pub fn bytes_get<'a>(input: &'a str, path: &Path<'a>) -> Result<(Option<Element<
         let b = unsafe { *bytes.get_unchecked(i) };
         match b {
             b'{' => {
-                return object_bytes_get(&input[i..], path);
+                let input = unsafe { input.get_unchecked(i..) };
+                return object_bytes_get(input, path);
             }
             b'[' => {
-                return array_bytes_get(&input[i..], path);
+                let input = unsafe { input.get_unchecked(i..) };
+                return array_bytes_get(input, path);
             }
 
             _ => {}
@@ -237,11 +237,11 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
     }
 }
 
+#[inline]
 fn object_bytes_get<'a>(
     mut input: &'a str,
     path: &Path<'a>,
 ) -> Result<(Option<Element<'a>>, &'a str)> {
-    let mut num = 0;
     input = &input[1..];
     loop {
         let (element, left) = element::read_one(input)?;
@@ -249,14 +249,7 @@ fn object_bytes_get<'a>(
             return Ok((None, ""));
         }
 
-
         input = left;
-
-        num += 1;
-        // object value
-        if num % 2 == 0 {
-            continue;
-        }
 
         // object key
         match element {
@@ -271,6 +264,12 @@ fn object_bytes_get<'a>(
             }
             _ => return Err(Error::ObjectKey),
         }
+
+        let (element, left) = element::read_one(input)?;
+        if element.is_none() {
+            return Ok((None, ""));
+        }
+        input = left;
     }
 }
 

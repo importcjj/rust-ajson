@@ -185,7 +185,6 @@ pub fn string(input: &str) -> Result<(&str, &str)> {
         i += 1;
     }
 
-
     Ok(input.split_at(i))
 }
 
@@ -216,7 +215,8 @@ pub fn compound(input: &str) -> Result<(&str, &str)> {
         match b {
             b'\\' => i += 1,
             b'"' => {
-                let (s, _) = string(&input[i..])?;
+                let input = unsafe { input.get_unchecked(i..) };
+                let (s, _) = string(input)?;
                 i += s.len();
                 continue;
             }
@@ -309,7 +309,6 @@ pub fn read_one(mut input: &str) -> Result<(Option<Element>, &str)> {
     let mut i = 0;
 
     while i < bytes.len() {
-        
         let b = unsafe { *bytes.get_unchecked(i) };
         match b {
             b'"' => {
@@ -343,7 +342,7 @@ pub fn read_one(mut input: &str) -> Result<(Option<Element>, &str)> {
             b'}' | b']' => return Ok((None, "")),
             _ => {
                 i += 1;
-                input = &input[1..];
+                input = unsafe { input.get_unchecked(1..) };
                 continue;
             }
         };
