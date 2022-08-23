@@ -13,6 +13,14 @@ impl<'a> Bytes<'a> {
         }
     }
 
+    pub fn reset(&mut self, input: &'a [u8]) {
+        *self = Bytes::new(input)
+    }
+
+    pub fn get_buffer(&self) -> &'a [u8] {
+        &self.buffer[self.offset..]
+    }
+
     #[inline(always)]
     fn overflow(&self) -> bool {
         self.offset == self.max_offset
@@ -52,10 +60,9 @@ impl<'a> Bytes<'a> {
     where
         F: FnMut(&mut Self, u8) -> ReaderAction,
     {
-        const CHUNK: usize = 8;
         'chunk: loop {
-            if self.offset + CHUNK < self.max_offset {
-                for _ in 0..CHUNK {
+            if self.offset + 16 < self.max_offset {
+                for _ in 0..16 {
                     self.offset += 1;
                     let b = unsafe { *self.buffer.get_unchecked(self.offset) };
                     match f(self, b) {

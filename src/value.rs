@@ -57,9 +57,9 @@ impl<'a> Value<'a> {
     pub fn get(&self, path: &'a str) -> Result<Option<Value>> {
         match self {
             Value::Array(s) | Value::Object(s) => {
-                let mut bytes = Bytes::new(s.as_bytes());
                 let p = Path::parse(path.as_ref())?;
-                Ok(parser::bytes_get(&mut bytes, &p)?.map(|el| el.to_value()))
+                let (a, _left) = parser::bytes_get(s, &p)?;
+                Ok(a.map(|el| el.to_value()))
             }
             _ => Ok(None),
         }
@@ -153,20 +153,14 @@ impl<'a> Value<'a> {
 
     pub fn as_vec(&self) -> Option<Vec<Value>> {
         match self {
-            Value::Array(s) => {
-                let mut bytes = Bytes::new(s.as_bytes());
-                parser::bytes_to_vec(&mut bytes).ok()
-            }
+            Value::Array(s) => parser::bytes_to_vec(s).ok(),
             _ => None,
         }
     }
 
     pub fn as_object(&self) -> Option<HashMap<&str, Value>> {
         match self {
-            Value::Object(s) => {
-                let mut bytes = Bytes::new(s.as_bytes());
-                parser::bytes_to_map(&mut bytes).ok()
-            }
+            Value::Object(s) => parser::bytes_to_map(s).ok(),
             _ => None,
         }
     }
