@@ -239,8 +239,6 @@ pub fn read_one<'a>(bytes: &mut Bytes<'a>) -> Result<Option<Element<'a>>> {
 
         bytes.next();
 
-        let v = value.to_value();
-
         return Ok(Some(value));
     }
 

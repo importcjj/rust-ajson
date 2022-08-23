@@ -330,9 +330,9 @@ fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| ajson_bench(black_box(BENCH_DATA)))
     });
 
-    c.bench_function("gjson benchmark", |b| {
-        b.iter(|| gjson_bench(black_box(BENCH_DATA)))
-    });
+    // c.bench_function("gjson benchmark", |b| {
+    //     b.iter(|| gjson_bench(black_box(BENCH_DATA)))
+    // });
 
     // c.bench_function("serde_json benchmark", |b| {
     //     b.iter(|| serde_json_bench(black_box(BENCH_DATA)))
