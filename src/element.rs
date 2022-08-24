@@ -205,18 +205,51 @@ mod test_string {
 
 // object or array
 pub fn compound(input: &str) -> Result<(&str, &str)> {
+    let bytes = input.as_bytes();
     let mut i = 1;
     let mut depth = 1;
-    let bytes = input.as_bytes();
+
+    const CHUNK_SIZE: usize = 8;
+
+    'outer: while i + CHUNK_SIZE < bytes.len() {
+        for _ in 0..CHUNK_SIZE {
+            let &b = unsafe { bytes.get_unchecked(i) };
+
+            match b {
+                b'\\' => {
+                    i += 2;
+                    continue 'outer;
+                }
+                b'"' => {
+                    let input = unsafe { input.get_unchecked(i..) };
+                    let (s, _) = string(input).unwrap();
+
+                    i += s.len();
+                    continue 'outer;
+                }
+                b'[' | b'{' => depth += 1,
+                b']' | b'}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        i += 1;
+                        return Ok(input.split_at(i));
+                    }
+                }
+                _ => (),
+            }
+             i += 1;
+        }
+    }
 
     while i < bytes.len() {
-        let b = unsafe { *bytes.get_unchecked(i) };
-
+        let &b = unsafe { bytes.get_unchecked(i) };
         match b {
-            b'\\' => i += 1,
+            b'\\' => {
+                i += 1;
+            }
             b'"' => {
                 let input = unsafe { input.get_unchecked(i..) };
-                let (s, _) = string(input)?;
+                let (s, _) = string(input).unwrap();
                 i += s.len();
                 continue;
             }
@@ -233,7 +266,7 @@ pub fn compound(input: &str) -> Result<(&str, &str)> {
         i += 1;
     }
 
-    Ok(input.split_at(i))
+    return Ok(input.split_at(i));
 }
 
 #[cfg(test)]
