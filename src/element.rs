@@ -289,6 +289,7 @@ pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     while i < bytes.len() {
         let &b = unsafe { bytes.get_unchecked(i) };
         match b {
+            b' ' => (),
             b'\\' => {
                 i += 1;
             }
