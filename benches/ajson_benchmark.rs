@@ -17,7 +17,7 @@ use json::JsonValue;
 use serde_json::Value;
 
 #[allow(dead_code)]
-static BENCH_DATA: &'static str = r#"{
+static BENCH_DATA: &str = r#"{
     "overflow": 9223372036854775808,
     "widget": {
         "debug": "on",
@@ -307,13 +307,14 @@ fn nom_json_bench(json: &str) {
     black_box({
         nom_json::root::<(&str, ErrorKind)>(json).map(|(_, value)| {
             let menu = &value["widget"]["menu"];
-            let _v: Vec<&nom_json::JsonValue> = black_box(
+            let v: Vec<&nom_json::JsonValue> = black_box(
                 menu.members()
                     .filter(|x| x["sub_item"].to_f64() > 5.0)
                     .map(|x| &x["title"])
                     .collect(),
             );
-        });
+            1
+        })
     });
 }
 

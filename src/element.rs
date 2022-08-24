@@ -118,22 +118,6 @@ pub fn true_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     Ok(split_at_u8(bytes, 4))
 }
 
-pub fn r#true(input: &str) -> Result<(&str, &str)> {
-    if input.len() < 4 {
-        return Err(crate::Error::Eof);
-    }
-
-    Ok(split_at(input, 4))
-}
-
-pub fn r#false(input: &str) -> Result<(&str, &str)> {
-    if input.len() < 5 {
-        return Err(crate::Error::Eof);
-    }
-
-    Ok(split_at(input, 5))
-}
-
 pub fn false_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     if bytes.len() < 5 {
         return Err(crate::Error::Eof);
@@ -148,14 +132,6 @@ pub fn null_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     }
 
     Ok(split_at_u8(bytes, 4))
-}
-
-pub fn null(input: &str) -> Result<(&str, &str)> {
-    if input.len() < 4 {
-        return Err(crate::Error::Eof);
-    }
-
-    Ok(split_at(input, 4))
 }
 
 #[inline(always)]
@@ -253,18 +229,29 @@ pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     let mut i = 1;
     let mut depth = 1;
 
-    const CHUNK_SIZE: usize = 32;
+    const CHUNK_SIZE: usize = 16;
+
+    const CHAR_TABLE: [u8; 256] = {
+        let mut table = [0; 256];
+        table['"' as usize] = 1;
+        table['[' as usize] = 1;
+        table[']' as usize] = 1;
+        table['{' as usize] = 1;
+        table['}' as usize] = 1;
+        table['\\' as usize] = 1;
+
+        table
+    };
 
     'outer: while i + CHUNK_SIZE < bytes.len() {
         for _ in 0..CHUNK_SIZE {
             let &b = unsafe { bytes.get_unchecked(i) };
+            if CHAR_TABLE[b as usize] == 0 {
+                i += 1;
+                continue;
+            }
 
             match b {
-                b' ' => (),
-                b'\\' => {
-                    i += 2;
-                    continue 'outer;
-                }
                 b'"' => {
                     let input = unsafe { bytes.get_unchecked(i..) };
                     let (s, _) = string_u8(input).unwrap();
@@ -280,6 +267,10 @@ pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
                         return Ok(split_at_u8(bytes, i));
                     }
                 }
+                b'\\' => {
+                    i += 2;
+                    continue 'outer;
+                }
                 _ => (),
             }
             i += 1;
@@ -288,8 +279,12 @@ pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
 
     while i < bytes.len() {
         let &b = unsafe { bytes.get_unchecked(i) };
+        if CHAR_TABLE[b as usize] == 0 {
+            i += 1;
+            continue;
+        }
+
         match b {
-            b' ' => (),
             b'\\' => {
                 i += 1;
             }
@@ -415,44 +410,43 @@ pub fn number_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     Ok(split_at_u8(bytes, i))
 }
 
-pub fn number(input: &str) -> Result<(&str, &str)> {
-    let mut i = 0;
-    let bytes = input.as_bytes();
-
-    while i < bytes.len() {
-        let b = unsafe { *bytes.get_unchecked(i) };
-
-        match b {
-            b'0'..=b'9' => (),
-            b'-' | b'.' => (),
-            _ => break,
-        }
-        i += 1;
-    }
-
-    Ok(input.split_at(i))
-}
-
-#[cfg(test)]
-mod test_number {
-    use super::number;
-
-    #[test]
-    fn test_number() {
-        assert_eq!(number("9999,123"), Ok(("9999", ",123")));
-        assert_eq!(number("9999"), Ok(("9999", "")));
-        assert_eq!(number("-9999,123"), Ok(("-9999", ",123")));
-        assert_eq!(number("9999.1112,"), Ok(("9999.1112", ",")));
-    }
-}
-
 pub fn read_one(input: &[u8]) -> Result<(Option<Element>, &[u8])> {
     let mut i = 0;
 
+    const TABLE: [u8; 256] = {
+        let mut table = [0; 256];
+        table[b'"' as usize] = 1;
+        table[b't' as usize] = 1;
+        table[b'f' as usize] = 1;
+        table[b'n' as usize] = 1;
+        table[b'{' as usize] = 1;
+        table[b'}' as usize] = 1;
+        table[b'[' as usize] = 1;
+        table[b']' as usize] = 1;
+        table[b'0' as usize] = 1;
+        table[b'1' as usize] = 1;
+        table[b'2' as usize] = 1;
+        table[b'3' as usize] = 1;
+        table[b'4' as usize] = 1;
+        table[b'5' as usize] = 1;
+        table[b'6' as usize] = 1;
+        table[b'7' as usize] = 1;
+        table[b'8' as usize] = 1;
+        table[b'9' as usize] = 1;
+        table[b'-' as usize] = 1;
+        table[b'.' as usize] = 1;
+
+        table
+    };
+
     while i < input.len() {
         let b = unsafe { *input.get_unchecked(i) };
+        if TABLE[b as usize] == 0 {
+            i += 1;
+            continue;
+        }
+
         match b {
-            b' ' => {}
             b'"' => {
                 let input = unsafe { input.get_unchecked(i..) };
                 let (a, b) = string_u8(input)?;
@@ -491,9 +485,6 @@ pub fn read_one(input: &[u8]) -> Result<(Option<Element>, &[u8])> {
             b'}' | b']' => return Ok((None, "".as_bytes())),
             _ => (),
         };
-
-        i += 1;
     }
-
     Ok((None, "".as_bytes()))
 }

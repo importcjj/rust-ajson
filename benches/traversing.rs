@@ -225,14 +225,6 @@ pub fn traverse_benchmark(c: &mut Criterion) {
     c.bench_function("chunk traversing u8", |b| {
         b.iter(|| ajson::compound_u8(black_box(BENCH_DATA.as_bytes())))
     });
-
-    c.bench_function("ajson parse", |b| {
-        b.iter(|| ajson::parse(black_box(BENCH_DATA)))
-    });
-
-    c.bench_function("gjson parse", |b| {
-        b.iter(|| gjson::parse(black_box(BENCH_DATA)))
-    });
 }
 
 criterion_group!(benches, traverse_benchmark);
