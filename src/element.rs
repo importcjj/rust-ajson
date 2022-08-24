@@ -1,4 +1,3 @@
-use crate::reader::{Bytes, ReaderAction};
 use crate::unescape;
 use crate::value::Value;
 use crate::Number;
@@ -9,12 +8,12 @@ use std::str;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Element<'a> {
-    String(&'a str),
-    Object(&'a str),
-    Array(&'a str),
-    Null(&'a str),
-    Boolean(&'a str),
-    Number(&'a str),
+    String(&'a [u8]),
+    Object(&'a [u8]),
+    Array(&'a [u8]),
+    Null(&'a [u8]),
+    Boolean(&'a [u8]),
+    Number(&'a [u8]),
     Count(usize),
     List(Vec<Element<'a>>),
     Map(HashMap<&'a str, Element<'a>>),
@@ -24,12 +23,18 @@ impl<'a> Element<'a> {
     pub fn to_value(&self) -> Value<'a> {
         match &self {
             Element::String(buf) => {
-                let s = unescape(buf[1..buf.len() - 1].as_bytes());
+                let s = unescape(&buf[1..buf.len() - 1]);
                 Value::String(Cow::Owned(s))
             }
-            Element::Object(s) => Value::Object(Cow::Borrowed(s)),
-            Element::Array(s) => Value::Array(Cow::Borrowed(s)),
-            Element::Boolean(buf) => match buf.as_bytes()[0] {
+            Element::Object(s) => {
+                let s = unsafe { std::str::from_utf8_unchecked(s) };
+                Value::Object(Cow::Borrowed(s))
+            }
+            Element::Array(s) => {
+                let s = unsafe { std::str::from_utf8_unchecked(s) };
+                Value::Array(Cow::Borrowed(s))
+            }
+            Element::Boolean(buf) => match buf[0] {
                 b't' => Value::Boolean(true),
                 _ => Value::Boolean(false),
             },
@@ -84,6 +89,7 @@ impl<'a> Element<'a> {
             | Element::Boolean(s)
             | Element::Number(s)
             | Element::Null(s) => {
+                let s = unsafe { std::str::from_utf8_unchecked(s) };
                 buffer.push_str(s);
             }
             Element::List(ref elements) => {
@@ -104,14 +110,12 @@ impl<'a> Element<'a> {
     }
 }
 
-pub fn read_true<'a>(bytes: &mut Bytes<'a>) -> Result<Element<'a>> {
-    let start = bytes.position();
-    for _ in 0..4 {
-        bytes.next();
+pub fn true_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
+    if bytes.len() < 4 {
+        return Err(crate::Error::Eof);
     }
 
-    let s = unsafe { std::str::from_utf8_unchecked(bytes.slice(start, start + 4 - 1)) };
-    Ok(Element::Boolean(s))
+    Ok(split_at_u8(bytes, 4))
 }
 
 pub fn r#true(input: &str) -> Result<(&str, &str)> {
@@ -119,16 +123,7 @@ pub fn r#true(input: &str) -> Result<(&str, &str)> {
         return Err(crate::Error::Eof);
     }
 
-    Ok(input.split_at(4))
-}
-
-pub fn read_false<'a>(bytes: &mut Bytes<'a>) -> Result<Element<'a>> {
-    let start = bytes.position();
-    for _ in 0..5 {
-        bytes.next();
-    }
-    let s = unsafe { std::str::from_utf8_unchecked(bytes.slice(start, start + 4 - 1)) };
-    Ok(Element::Boolean(s))
+    Ok(split_at(input, 4))
 }
 
 pub fn r#false(input: &str) -> Result<(&str, &str)> {
@@ -136,17 +131,23 @@ pub fn r#false(input: &str) -> Result<(&str, &str)> {
         return Err(crate::Error::Eof);
     }
 
-    Ok(input.split_at(5))
+    Ok(split_at(input, 5))
 }
 
-pub fn read_null<'a>(bytes: &mut Bytes<'a>) -> Result<Element<'a>> {
-    let start = bytes.position();
-    for _ in 0..4 {
-        bytes.next();
+pub fn false_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
+    if bytes.len() < 5 {
+        return Err(crate::Error::Eof);
     }
 
-    let s = unsafe { std::str::from_utf8_unchecked(bytes.slice(start, start + 4 - 1)) };
-    Ok(Element::Null(s))
+    Ok(split_at_u8(bytes, 5))
+}
+
+pub fn null_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
+    if bytes.len() < 4 {
+        return Err(crate::Error::Eof);
+    }
+
+    Ok(split_at_u8(bytes, 4))
 }
 
 pub fn null(input: &str) -> Result<(&str, &str)> {
@@ -154,20 +155,23 @@ pub fn null(input: &str) -> Result<(&str, &str)> {
         return Err(crate::Error::Eof);
     }
 
-    Ok(input.split_at(4))
+    Ok(split_at(input, 4))
 }
 
-pub fn read_str<'a>(bytes: &mut Bytes<'a>) -> Result<Element<'a>> {
-    let (start, end) = read_str_range(bytes)?;
-    let s = unsafe { std::str::from_utf8_unchecked(bytes.slice(start, start + 4 - 1)) };
-    Ok(Element::String(s))
+#[inline(always)]
+pub fn split_at(s: &str, mid: usize) -> (&str, &str) {
+    unsafe { (s.get_unchecked(..mid), s.get_unchecked(mid..s.len())) }
 }
 
-pub fn string(input: &str) -> Result<(&str, &str)> {
+#[inline(always)]
+pub fn split_at_u8(s: &[u8], mid: usize) -> (&[u8], &[u8]) {
+    unsafe { (s.get_unchecked(..mid), s.get_unchecked(mid..s.len())) }
+}
+
+pub fn string_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     // skip check the first byte
 
     let mut i = 1;
-    let bytes = input.as_bytes();
     while i < bytes.len() {
         let b = unsafe { *bytes.get_unchecked(i) };
 
@@ -185,7 +189,49 @@ pub fn string(input: &str) -> Result<(&str, &str)> {
         i += 1;
     }
 
-    Ok(input.split_at(i))
+    Ok(split_at_u8(bytes, i))
+}
+
+pub fn string(input: &str) -> Result<(&str, &str)> {
+    let mut i = 1;
+    let bytes = input.as_bytes();
+    const CHUNK: usize = 4;
+
+    'outer: while i + CHUNK < bytes.len() {
+        for _ in 0..CHUNK {
+            let &b = unsafe { bytes.get_unchecked(i) };
+            i += 1;
+            match b {
+                b'"' => {
+                    return Ok(split_at(input, i));
+                }
+                b'\\' => {
+                    i += 1;
+                    continue 'outer;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    while i < bytes.len() {
+        let b = unsafe { *bytes.get_unchecked(i) };
+
+        match b {
+            b'"' => {
+                i += 1;
+                break;
+            }
+            b'\\' => {
+                i += 1;
+            }
+            _ => {}
+        }
+
+        i += 1;
+    }
+
+    return Ok(split_at(input, i));
 }
 
 #[cfg(test)]
@@ -203,13 +249,78 @@ mod test_string {
     }
 }
 
+pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
+    let mut i = 1;
+    let mut depth = 1;
+
+    const CHUNK_SIZE: usize = 32;
+
+    'outer: while i + CHUNK_SIZE < bytes.len() {
+        for _ in 0..CHUNK_SIZE {
+            let &b = unsafe { bytes.get_unchecked(i) };
+
+            match b {
+                b' ' => (),
+                b'\\' => {
+                    i += 2;
+                    continue 'outer;
+                }
+                b'"' => {
+                    let input = unsafe { bytes.get_unchecked(i..) };
+                    let (s, _) = string_u8(input).unwrap();
+
+                    i += s.len();
+                    continue 'outer;
+                }
+                b'[' | b'{' => depth += 1,
+                b']' | b'}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        i += 1;
+                        return Ok(split_at_u8(bytes, i));
+                    }
+                }
+                _ => (),
+            }
+            i += 1;
+        }
+    }
+
+    while i < bytes.len() {
+        let &b = unsafe { bytes.get_unchecked(i) };
+        match b {
+            b'\\' => {
+                i += 1;
+            }
+            b'"' => {
+                let input = unsafe { bytes.get_unchecked(i..) };
+                let (s, _) = string_u8(input).unwrap();
+                i += s.len();
+                continue;
+            }
+            b'[' | b'{' => depth += 1,
+            b']' | b'}' => {
+                depth -= 1;
+                if depth == 0 {
+                    i += 1;
+                    break;
+                }
+            }
+            _ => (),
+        }
+        i += 1;
+    }
+
+    return Ok(split_at_u8(bytes, i));
+}
+
 // object or array
 pub fn compound(input: &str) -> Result<(&str, &str)> {
     let bytes = input.as_bytes();
     let mut i = 1;
     let mut depth = 1;
 
-    const CHUNK_SIZE: usize = 8;
+    const CHUNK_SIZE: usize = 32;
 
     'outer: while i + CHUNK_SIZE < bytes.len() {
         for _ in 0..CHUNK_SIZE {
@@ -232,12 +343,12 @@ pub fn compound(input: &str) -> Result<(&str, &str)> {
                     depth -= 1;
                     if depth == 0 {
                         i += 1;
-                        return Ok(input.split_at(i));
+                        return Ok(split_at(input, i));
                     }
                 }
                 _ => (),
             }
-             i += 1;
+            i += 1;
         }
     }
 
@@ -266,7 +377,7 @@ pub fn compound(input: &str) -> Result<(&str, &str)> {
         i += 1;
     }
 
-    return Ok(input.split_at(i));
+    return Ok(split_at(input, i));
 }
 
 #[cfg(test)]
@@ -286,24 +397,21 @@ mod test_compound {
     }
 }
 
-pub fn read_str_range(bytes: &mut Bytes) -> Result<(usize, usize)> {
-    let start = bytes.position();
+pub fn number_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
+    let mut i = 0;
 
-    let mut ok = false;
-    bytes.next_byte(|reader, b| match b {
-        b'"' => {
-            ok = true;
-            ReaderAction::Break
+    while i < bytes.len() {
+        let b = unsafe { *bytes.get_unchecked(i) };
+
+        match b {
+            b'0'..=b'9' => (),
+            b'-' | b'.' => (),
+            _ => break,
         }
-        b'\\' => ReaderAction::Skip(1),
-        _ => ReaderAction::Continue,
-    });
-
-    let mut end = bytes.position();
-    if !ok {
-        end += 1;
+        i += 1;
     }
-    Ok((start, end))
+
+    Ok(split_at_u8(bytes, i))
 }
 
 pub fn number(input: &str) -> Result<(&str, &str)> {
@@ -337,49 +445,54 @@ mod test_number {
     }
 }
 
-pub fn read_one(mut input: &str) -> Result<(Option<Element>, &str)> {
-    let bytes = input.as_bytes();
+pub fn read_one(input: &[u8]) -> Result<(Option<Element>, &[u8])> {
     let mut i = 0;
 
-    while i < bytes.len() {
-        let b = unsafe { *bytes.get_unchecked(i) };
+    while i < input.len() {
+        let b = unsafe { *input.get_unchecked(i) };
         match b {
+            b' ' => {}
             b'"' => {
-                let (a, b) = string(input)?;
+                let input = unsafe { input.get_unchecked(i..) };
+                let (a, b) = string_u8(input)?;
                 return Ok((Some(Element::String(a)), b));
             }
             b't' => {
-                let (a, b) = r#true(input)?;
+                let input = unsafe { input.get_unchecked(i..) };
+                let (a, b) = true_u8(input)?;
                 return Ok((Some(Element::Boolean(a)), b));
             }
             b'f' => {
-                let (a, b) = r#false(input)?;
+                let input = unsafe { input.get_unchecked(i..) };
+                let (a, b) = false_u8(input)?;
                 return Ok((Some(Element::Boolean(a)), b));
             }
             b'n' => {
-                let (a, b) = null(input)?;
+                let input = unsafe { input.get_unchecked(i..) };
+                let (a, b) = null_u8(input)?;
                 return Ok((Some(Element::Null(a)), b));
             }
             b'{' => {
-                let (a, b) = compound(input)?;
+                let input = unsafe { input.get_unchecked(i..) };
+                let (a, b) = compound_u8(input)?;
                 return Ok((Some(Element::Object(a)), b));
             }
             b'[' => {
-                let (a, b) = compound(input)?;
+                let input = unsafe { input.get_unchecked(i..) };
+                let (a, b) = compound_u8(input)?;
                 return Ok((Some(Element::Array(a)), b));
             }
             b'0'..=b'9' | b'-' | b'.' => {
-                let (a, b) = number(input)?;
+                let input = unsafe { input.get_unchecked(i..) };
+                let (a, b) = number_u8(input)?;
                 return Ok((Some(Element::Number(a)), b));
             }
-            b'}' | b']' => return Ok((None, "")),
-            _ => {
-                i += 1;
-                input = unsafe { input.get_unchecked(1..) };
-                continue;
-            }
+            b'}' | b']' => return Ok((None, "".as_bytes())),
+            _ => (),
         };
+
+        i += 1;
     }
 
-    Ok((None, ""))
+    Ok((None, "".as_bytes()))
 }

@@ -46,11 +46,10 @@ const BENCH_DATA: &str = r#"{
     }
 }"#;
 
-pub fn string(input: &str) -> ajson::Result<(&str, &str)> {
+pub fn string(bytes: &[u8]) -> ajson::Result<(&[u8], &[u8])> {
     // skip check the first byte
 
     let mut i = 1;
-    let bytes = input.as_bytes();
     while i < bytes.len() {
         let b = unsafe { *bytes.get_unchecked(i) };
 
@@ -68,14 +67,18 @@ pub fn string(input: &str) -> ajson::Result<(&str, &str)> {
         i += 1;
     }
 
-    Ok(input.split_at(i))
+    Ok(split_at(bytes, i))
 }
 
-pub fn string_chunk(input: &str) -> ajson::Result<(&str, &str)> {
+#[inline(always)]
+pub fn split_at(s: &[u8], mid: usize) -> (&[u8], &[u8]) {
+    unsafe { (s.get_unchecked(..mid), s.get_unchecked(mid..s.len())) }
+}
+
+pub fn string_chunk(bytes: &[u8]) -> ajson::Result<(&[u8], &[u8])> {
     // skip check the first byte
 
     let mut i = 1;
-    let bytes = input.as_bytes();
     const CHUNK: usize = 4;
 
     'outer: while i + CHUNK < bytes.len() {
@@ -83,9 +86,7 @@ pub fn string_chunk(input: &str) -> ajson::Result<(&str, &str)> {
             let &b = unsafe { bytes.get_unchecked(i) };
             i += 1;
             match b {
-                b'"' => {
-                    return Ok(input.split_at(i));
-                }
+                b'"' => return Ok(split_at(bytes, i)),
                 b'\\' => {
                     i += 1;
                     continue 'outer;
@@ -112,11 +113,10 @@ pub fn string_chunk(input: &str) -> ajson::Result<(&str, &str)> {
         i += 1;
     }
 
-    Ok(input.split_at(i))
+    Ok(split_at(bytes, i))
 }
 
-fn traversing(json: &str) {
-    let bytes = json.as_bytes();
+fn traversing(bytes: &[u8]) -> ajson::Result<(&[u8], &[u8])> {
     let mut i = 0;
     let mut depth = 1;
 
@@ -127,7 +127,7 @@ fn traversing(json: &str) {
                 i += 1;
             }
             b'"' => {
-                let input = unsafe { json.get_unchecked(i..) };
+                let input = unsafe { bytes.get_unchecked(i..) };
                 let (s, _) = string(input).unwrap();
                 i += s.len();
                 continue;
@@ -145,26 +145,28 @@ fn traversing(json: &str) {
         i += 1;
     }
 
+    return Ok(split_at(bytes, i));
+
     // println!("{}", &json[..i]);
 }
 
-fn chunk_traversing(json: &str) {
-    let bytes = json.as_bytes();
-    let mut i = 0;
+fn chunk_traversing(bytes: &[u8]) -> ajson::Result<(&[u8], &[u8])> {
+    let mut i = 1;
     let mut depth = 1;
 
-    const CHUNK_SIZE: usize = 8;
+    const CHUNK_SIZE: usize = 32;
 
     'outer: while i + CHUNK_SIZE < bytes.len() {
         for _ in 0..CHUNK_SIZE {
             let &b = unsafe { bytes.get_unchecked(i) };
+
             match b {
                 b'\\' => {
                     i += 2;
                     continue 'outer;
                 }
                 b'"' => {
-                    let input = unsafe { json.get_unchecked(i..) };
+                    let input = unsafe { bytes.get_unchecked(i..) };
                     let (s, _) = string(input).unwrap();
 
                     i += s.len();
@@ -175,12 +177,11 @@ fn chunk_traversing(json: &str) {
                     depth -= 1;
                     if depth == 0 {
                         i += 1;
-                        return;
+                        return Ok(split_at(bytes, i));
                     }
                 }
                 _ => (),
             }
-
             i += 1;
         }
     }
@@ -192,7 +193,7 @@ fn chunk_traversing(json: &str) {
                 i += 1;
             }
             b'"' => {
-                let input = unsafe { json.get_unchecked(i..) };
+                let input = unsafe { bytes.get_unchecked(i..) };
                 let (s, _) = string(input).unwrap();
                 i += s.len();
                 continue;
@@ -210,14 +211,27 @@ fn chunk_traversing(json: &str) {
         i += 1;
     }
 
+    return Ok(split_at(bytes, i));
 }
 
 pub fn traverse_benchmark(c: &mut Criterion) {
     c.bench_function("traversing", |b| {
-        b.iter(|| traversing(black_box(BENCH_DATA)))
+        b.iter(|| traversing(black_box(BENCH_DATA.as_bytes())))
     });
     c.bench_function("chunk traversing", |b| {
-        b.iter(|| chunk_traversing(black_box(BENCH_DATA)))
+        b.iter(|| ajson::compound(black_box(BENCH_DATA)))
+    });
+
+    c.bench_function("chunk traversing u8", |b| {
+        b.iter(|| ajson::compound_u8(black_box(BENCH_DATA.as_bytes())))
+    });
+
+    c.bench_function("ajson parse", |b| {
+        b.iter(|| ajson::parse(black_box(BENCH_DATA)))
+    });
+
+    c.bench_function("gjson parse", |b| {
+        b.iter(|| gjson::parse(black_box(BENCH_DATA)))
     });
 }
 

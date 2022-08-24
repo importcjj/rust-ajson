@@ -107,7 +107,8 @@ fn ajson_bench(json: &str) {
             .as_str(),
     );
     black_box(ajson::get(json, "widget.debug").unwrap().unwrap().as_str());
-    // ajson::get(json, "widget.text").as_map();
+    // black_box(ajson::get(json, "widget.text").unwrap().unwrap().as_object());
+
     black_box(
         ajson::get(json, "widget.menu.#(sub_item>7)#.title")
             .unwrap()
@@ -133,8 +134,8 @@ fn gjson_bench(json: &str) {
     black_box(gjson::get(json, "widget.image.hOffset").f64());
     black_box(gjson::get(json, "widget.text.onMouseUp").str());
     black_box(gjson::get(json, "widget.debug").str());
-    // ajson::get(json, "widget.text").as_map();
-    // black_box(gjson::get(json, "widget.menu.#(sub_item>7)#.title").array());
+
+    black_box(gjson::get(json, "widget.menu.#(sub_item>7)#.title").array());
     // gjson::get(json, "widget.menu.[1.title,2.options]").as_array();
 }
 
@@ -344,14 +345,13 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     // c.bench_function("ajson path benchmark", |b| b.iter(ajson_path_bench));
 
-
     c.bench_function("ajson benchmark", |b| {
         b.iter(|| ajson_bench(black_box(BENCH_DATA)))
     });
 
-    // c.bench_function("gjson benchmark", |b| {
-    //     b.iter(|| gjson_bench(black_box(BENCH_DATA)))
-    // });
+    c.bench_function("gjson benchmark", |b| {
+        b.iter(|| gjson_bench(black_box(BENCH_DATA)))
+    });
 
     // c.bench_function("serde_json benchmark", |b| {
     //     b.iter(|| serde_json_bench(black_box(BENCH_DATA)))

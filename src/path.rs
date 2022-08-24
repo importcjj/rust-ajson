@@ -1,15 +1,15 @@
-use path_parser;
+use crate::path_parser;
+use crate::sub_selector::SubSelector;
 use std::fmt;
-use sub_selector::SubSelector;
 
 use crate::element::Element;
+use crate::unescape::unescape;
+use crate::util;
+use crate::value::Value;
 use crate::Result;
-use unescape::unescape;
-use util;
-use value::Value;
 
 #[cfg(feature = "wild")]
-use wild;
+use crate::wild;
 
 static DEFAULT_NONE_QUERY: Query = Query {
     on: false,
@@ -176,7 +176,7 @@ impl<'a> Path<'a> {
 
 #[derive(Debug, PartialEq)]
 pub enum QueryValue<'a> {
-    String(&'a str),
+    String(&'a [u8]),
     F64(f64),
     Boolean(bool),
     Null,
@@ -244,12 +244,10 @@ impl<'a> Query<'a> {
         }
     }
 
-    #[allow(dead_code)]
     pub fn has_key(&self) -> bool {
         self.key.is_some()
     }
 
-    #[allow(dead_code)]
     pub fn get_key(&self) -> &Path {
         match self.key {
             Some(_) => self.key.as_ref().unwrap(),
@@ -273,7 +271,6 @@ impl<'a> Query<'a> {
         self.all = all;
     }
 
-    #[allow(dead_code)]
     pub fn set_key(&mut self, key: Path<'a>) {
         if key.ok {
             self.key = Some(Box::new(key));
@@ -300,17 +297,17 @@ impl<'a> Query<'a> {
         match *target {
             QueryValue::String(q) => match v {
                 Value::String(ref s) => match *op {
-                    "==" => s.as_ref() == q,
-                    "=" => s == q,
-                    "!=" => s != q,
-                    ">" => s.as_ref() > q,
-                    ">=" => s.as_ref() >= q,
-                    "<" => s.as_ref() < q,
-                    "<=" => s.as_ref() <= q,
+                    "==" => s.as_bytes() == q,
+                    "=" => s.as_bytes() == q,
+                    "!=" => s.as_bytes() != q,
+                    ">" => s.as_bytes() > q,
+                    ">=" => s.as_bytes() >= q,
+                    "<" => s.as_bytes() < q,
+                    "<=" => s.as_bytes() <= q,
                     #[cfg(feature = "wild")]
-                    "%" => wild::is_match(s, q),
+                    "%" => wild::is_match_u8(s.as_bytes(), q),
                     #[cfg(feature = "wild")]
-                    "!%" => !wild::is_match(s, q),
+                    "!%" => !wild::is_match_u8(s.as_bytes(), q),
                     _ => false,
                 },
                 _ => false,

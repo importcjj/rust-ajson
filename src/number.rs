@@ -1,4 +1,3 @@
-use reader::Bytes;
 use std::convert::From;
 const MIN_UINT_53: u64 = 0;
 const MAX_UINT_53: u64 = 4503599627370495;
@@ -9,10 +8,8 @@ const ZERO_INT: i64 = 0;
 const ZERO_FLOAT: f64 = 0.0;
 const ZERO_FLOAT_F32: f32 = 0.0;
 
-#[allow(dead_code)]
-const ZERO_INT_I32: i32 = 0;
-#[allow(dead_code)]
-const ZERO_INT_U32: u32 = 0;
+// const ZERO_INT_I32: i32 = 0;
+// const ZERO_INT_U32: u32 = 0;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Number<'a> {
@@ -23,29 +20,16 @@ pub enum Number<'a> {
 
 impl<'a> From<&'a [u8]> for Number<'a> {
     fn from(v: &[u8]) -> Number {
-        let mut reader = Bytes::new(v);
-        Number::from(&mut reader)
-    }
-}
-
-impl<'a> From<&'a str> for Number<'a> {
-    fn from(s: &str) -> Number {
-        Number::from(s.as_bytes())
-    }
-}
-
-impl<'a> From<&mut Bytes<'a>> for Number<'a> {
-    fn from(r: &mut Bytes<'a>) -> Number<'a> {
-        let start = r.position();
-        let sign = match r.peek() {
+        let sign = match v.first() {
             Some(b'-') => true,
             None => panic!("invalid number"),
             _ => false,
         };
 
         let mut float = false;
-
-        while let Some(b) = r.next() {
+        let mut i = 1;
+        while i < v.len() {
+            let &b = unsafe { v.get_unchecked(i) };
             match b {
                 b'0'..=b'9' => (),
                 b'.' => float = true,
@@ -53,10 +37,11 @@ impl<'a> From<&mut Bytes<'a>> for Number<'a> {
                     break;
                 }
             };
+            i += 1;
         }
-        let end = r.position() - 1;
 
-        let s = unsafe { std::str::from_utf8_unchecked(r.slice(start, end)) };
+        let s = unsafe { std::str::from_utf8_unchecked(v.get_unchecked(0..i)) };
+
         if float {
             Number::F64(s)
         } else if sign {

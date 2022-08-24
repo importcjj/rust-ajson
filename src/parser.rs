@@ -8,10 +8,9 @@ use crate::Result;
 use std::collections::HashMap;
 use std::str;
 
-pub fn bytes_to_vec(mut input: &str) -> Result<Vec<Value>> {
+pub fn bytes_to_vec(mut bytes: &[u8]) -> Result<Vec<Value>> {
     let mut arr = Vec::new();
     let mut i = 0;
-    let bytes = input.as_bytes();
     while i < bytes.len() {
         let b = unsafe { *bytes.get_unchecked(i) };
         if b == b'[' {
@@ -24,11 +23,11 @@ pub fn bytes_to_vec(mut input: &str) -> Result<Vec<Value>> {
         return Ok(arr);
     }
 
-    input = &input[i + 1..];
+    bytes = &bytes[i + 1..];
 
     loop {
-        let (a, left) = element::read_one(input)?;
-        input = left;
+        let (a, left) = element::read_one(bytes)?;
+        bytes = left;
         match a {
             Some(element) => {
                 arr.push(element.to_value());
@@ -41,13 +40,12 @@ pub fn bytes_to_vec(mut input: &str) -> Result<Vec<Value>> {
     Ok(arr)
 }
 
-pub fn bytes_to_map(mut input: &str) -> Result<HashMap<&str, Value>> {
+pub fn bytes_to_map(mut bytes: &[u8]) -> Result<HashMap<&str, Value>> {
     let mut m = HashMap::new();
     let mut key_cache: Option<&str> = None;
     let mut count = 0;
 
     let mut i = 0;
-    let bytes = input.as_bytes();
     while i < bytes.len() {
         let b = unsafe { *bytes.get_unchecked(i) };
         if b == b'{' {
@@ -64,18 +62,19 @@ pub fn bytes_to_map(mut input: &str) -> Result<HashMap<&str, Value>> {
         return Err(Error::Object);
     }
 
-    input = &input[i + 1..];
+    bytes = &bytes[i + 1..];
 
     loop {
-        let (a, b) = element::read_one(input)?;
-        input = b;
+        let (a, b) = element::read_one(bytes)?;
+        bytes = b;
         match a {
             Some(element) => {
                 count += 1;
                 if count % 2 == 1 {
                     match element {
                         Element::String(s) => {
-                            key_cache = Some(&s[1..s.len() - 1]);
+                            let s = unsafe { std::str::from_utf8_unchecked(&s[1..s.len() - 1]) };
+                            key_cache = Some(s);
                         }
                         _ => return Err(Error::ObjectKey),
                     };
@@ -90,42 +89,62 @@ pub fn bytes_to_map(mut input: &str) -> Result<HashMap<&str, Value>> {
     Ok(m)
 }
 
-pub fn bytes_get<'a>(input: &'a str, path: &Path<'a>) -> Result<(Option<Element<'a>>, &'a str)> {
-    if !path.ok || input.is_empty() {
-        return Ok((None, ""));
+pub fn bytes_get<'a>(bytes: &'a [u8], path: &Path<'a>) -> Result<(Option<Element<'a>>, &'a [u8])> {
+    if !path.ok || bytes.is_empty() {
+        return Ok((None, "".as_bytes()));
     }
 
     if path.has_selectors() {
         let element = match path.arrsel {
-            true => select_to_array(input, path.borrow_selectors())?,
-            false => select_to_object(input, path.borrow_selectors())?,
+            true => select_to_array(bytes, path.borrow_selectors())?,
+            false => select_to_object(bytes, path.borrow_selectors())?,
         };
 
         match element {
             Some(element) => {
                 if path.more {
                     let element = element_get(element, path.borrow_next())?;
-                    return Ok((element, ""));
+                    return Ok((element, "".as_bytes()));
                 } else {
-                    return Ok((Some(element), ""));
+                    return Ok((Some(element), "".as_bytes()));
                 }
             }
-            None => return Ok((None, "")),
+            None => return Ok((None, "".as_bytes())),
         }
     }
 
-    let bytes = input.as_bytes();
     let mut i = 0;
+    const CHUNK: usize = 32;
+
+    while i + CHUNK < bytes.len() {
+        for _ in 0..CHUNK {
+            let b = unsafe { *bytes.get_unchecked(i) };
+            match b {
+                b'{' => {
+                    let input = unsafe { bytes.get_unchecked(i..) };
+                    return object_bytes_get(input, path);
+                }
+                b'[' => {
+                    let input = unsafe { bytes.get_unchecked(i..) };
+                    return array_bytes_get(input, path);
+                }
+
+                _ => (),
+            }
+
+            i += 1;
+        }
+    }
 
     while i < bytes.len() {
         let b = unsafe { *bytes.get_unchecked(i) };
         match b {
             b'{' => {
-                let input = unsafe { input.get_unchecked(i..) };
+                let input = unsafe { bytes.get_unchecked(i..) };
                 return object_bytes_get(input, path);
             }
             b'[' => {
-                let input = unsafe { input.get_unchecked(i..) };
+                let input = unsafe { bytes.get_unchecked(i..) };
                 return array_bytes_get(input, path);
             }
 
@@ -135,10 +154,10 @@ pub fn bytes_get<'a>(input: &'a str, path: &Path<'a>) -> Result<(Option<Element<
         i += 1;
     }
 
-    Ok((None, ""))
+    Ok((None, "".as_bytes()))
 }
 
-fn select_to_object<'a>(input: &'a str, sels: &[SubSelector<'a>]) -> Result<Option<Element<'a>>> {
+fn select_to_object<'a>(input: &'a [u8], sels: &[SubSelector<'a>]) -> Result<Option<Element<'a>>> {
     let mut map = HashMap::new();
 
     for sel in sels {
@@ -152,7 +171,7 @@ fn select_to_object<'a>(input: &'a str, sels: &[SubSelector<'a>]) -> Result<Opti
     Ok(Some(Element::Map(map)))
 }
 
-fn select_to_array<'a>(input: &'a str, sels: &[SubSelector<'a>]) -> Result<Option<Element<'a>>> {
+fn select_to_array<'a>(input: &'a [u8], sels: &[SubSelector<'a>]) -> Result<Option<Element<'a>>> {
     let mut list = Vec::new();
 
     for sel in sels {
@@ -172,7 +191,7 @@ fn element_ref_get<'a>(element: &Element<'a>, path: &Path<'a>) -> Result<Option<
 
     match element {
         Element::Array(s) | Element::Object(s) => {
-            let (a, b) = bytes_get(s, path)?;
+            let (a, _b) = bytes_get(s, path)?;
             Ok(a)
         }
         _ => Ok(None),
@@ -186,7 +205,7 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
 
     match element {
         Element::Array(s) | Element::Object(s) => {
-            let (a, b) = bytes_get(s, path)?;
+            let (a, _b) = bytes_get(s, path)?;
             Ok(a)
         }
         Element::Map(m) => {
@@ -239,44 +258,51 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
 
 #[inline]
 fn object_bytes_get<'a>(
-    mut input: &'a str,
+    mut input: &'a [u8],
     path: &Path<'a>,
-) -> Result<(Option<Element<'a>>, &'a str)> {
-    input = &input[1..];
-    loop {
-        let (element, left) = element::read_one(input)?;
-        if element.is_none() {
-            return Ok((None, ""));
+) -> Result<(Option<Element<'a>>, &'a [u8])> {
+    let mut i = 1;
+
+    while i < input.len() {
+        let &b = unsafe { input.get_unchecked(i) };
+        if b == b'}' {
+            i += 1;
+            return Ok((None, &input[i..]));
         }
 
+        if b != b'"' {
+            i += 1;
+            continue;
+        }
+
+        input = unsafe { input.get_unchecked(i..) };
+        let (s, left) = element::string_u8(input)?;
         input = left;
 
         // object key
-        match element {
-            Some(Element::String(s)) => {
-                if path.is_match(s[1..s.len() - 1].as_bytes()) {
-                    return if path.more {
-                        bytes_get(input, path.borrow_next())
-                    } else {
-                        element::read_one(input)
-                    };
-                }
-            }
-            _ => return Err(Error::ObjectKey),
+        if path.is_match(&s[1..s.len() - 1]) {
+            return if path.more {
+                bytes_get(input, path.borrow_next())
+            } else {
+                element::read_one(input)
+            };
         }
 
         let (element, left) = element::read_one(input)?;
         if element.is_none() {
-            return Ok((None, ""));
+            return Ok((None, "".as_bytes()));
         }
         input = left;
+        i = 0;
     }
+
+    Ok((None, "".as_bytes()))
 }
 
 fn array_bytes_get<'a>(
-    mut input: &'a str,
+    mut bytes: &'a [u8],
     path: &Path<'a>,
-) -> Result<(Option<Element<'a>>, &'a str)> {
+) -> Result<(Option<Element<'a>>, &'a [u8])> {
     let mut index = 0;
     let (idx, get_idx) = match str::from_utf8(path.part)
         .map_err(|_| Error::Path)?
@@ -289,24 +315,24 @@ fn array_bytes_get<'a>(
     let query = path.borrow_query();
     let query_key = query.get_path()?;
 
-    let mut elements = vec![];
+    let mut elements = Vec::new();
     let return_list = (query.on && query.all) || (!query.on && path.more);
     let only_first = query.on && !query.all;
 
-    input = &input[1..];
+    bytes = &bytes[1..];
 
     loop {
         // index matched
         if get_idx && idx == index {
             return if path.more {
-                bytes_get(input, path.borrow_next())
+                bytes_get(bytes, path.borrow_next())
             } else {
-                element::read_one(input)
+                element::read_one(bytes)
             };
         }
 
-        let (readed, left) = element::read_one(input)?;
-        input = left;
+        let (readed, left) = element::read_one(bytes)?;
+        bytes = left;
 
         let mut element = match readed {
             None => break,
@@ -339,7 +365,7 @@ fn array_bytes_get<'a>(
         }
 
         if only_first {
-            return Ok((Some(element), input));
+            return Ok((Some(element), bytes));
         }
 
         if return_list {
@@ -348,12 +374,12 @@ fn array_bytes_get<'a>(
     }
 
     if return_list {
-        Ok((Some(Element::List(elements)), input))
+        Ok((Some(Element::List(elements)), bytes))
     } else if only_first {
-        Ok((None, input))
+        Ok((None, bytes))
     } else if path.arrch {
-        Ok((Some(Element::Count(index)), input))
+        Ok((Some(Element::Count(index)), bytes))
     } else {
-        Ok((None, input))
+        Ok((None, bytes))
     }
 }

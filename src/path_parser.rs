@@ -1,25 +1,28 @@
 use crate::element;
+use crate::path::{Path, Query, QueryValue};
+use crate::sub_selector;
 use crate::Result;
-use path::{Path, Query, QueryValue};
-use reader::Bytes;
-use sub_selector;
 
-use number::Number;
-use util;
+use crate::number::Number;
+use crate::util;
 
 pub(super) fn parse_path(v: &[u8]) -> Result<Path> {
     if v.is_empty() {
         return Ok(Path::empty());
     }
 
-    let mut bytes = Bytes::new(v);
+    let bytes = v;
     let mut current_path = Path::empty();
     let mut depth = 0;
+    let mut i = 0;
 
-    while let Some(b) = bytes.peek() {
+    while i < bytes.len() {
+        let &b = unsafe { bytes.get_unchecked(i) };
+
         match b {
             b'\\' => {
-                bytes.next();
+                i += 2;
+                continue;
             }
             b']' | b')' | b'}' => {
                 if depth > 0 {
@@ -27,13 +30,13 @@ pub(super) fn parse_path(v: &[u8]) -> Result<Path> {
                 }
             }
             b'.' => {
-                if depth == 0 && bytes.position() > 0 {
-                    let end = bytes.position() - 1;
-                    current_path.set_part(bytes.head(v, end));
+                if depth == 0 && i > 0 {
+                    current_path.set_part(&v[..i]);
                     current_path.set_ok(true);
                     current_path.set_more(true);
-                    bytes.next();
-                    let next = parse_path(bytes.tail(v))?;
+                    i += 1;
+
+                    let next = parse_path(&v[i..])?;
                     if next.ok {
                         current_path.set_next(next);
                     }
@@ -51,23 +54,23 @@ pub(super) fn parse_path(v: &[u8]) -> Result<Path> {
                 depth += 1;
                 if depth == 1 {
                     if current_path.arrch {
-                        bytes.next();
-                        let (query, offset) = parse_query(bytes.tail(v))?;
+                        i += 1;
+                        let (query, offset) = parse_query(&v[i..])?;
                         if query.on {
-                            bytes.forward(offset - 1);
+                            i += offset - 1;
                         }
                         current_path.set_q(query);
 
                         depth = 0;
                         continue;
                     } else {
-                        let (selectors, offset, ok) = sub_selector::parse_selectors(bytes.tail(v));
+                        let (selectors, offset, ok) = sub_selector::parse_selectors(&v[i..]);
                         if ok {
                             if b != b'{' {
                                 current_path.set_arrsel(true);
                             }
                             current_path.set_selectors(selectors);
-                            bytes.forward(offset - 1);
+                            i += offset - 1;
                             depth = 0;
                         }
                     }
@@ -75,7 +78,7 @@ pub(super) fn parse_path(v: &[u8]) -> Result<Path> {
             }
             _ => (),
         };
-        bytes.next();
+        i += 1;
     }
 
     current_path.set_part(v);
@@ -89,7 +92,7 @@ fn parse_query(v: &[u8]) -> Result<(Query, usize)> {
         return Ok((Query::empty(), 0));
     }
 
-    let mut bytes = Bytes::new(v);
+    let bytes = v;
     let mut q = Query::empty();
     let mut depth = 1;
     let mut end = 0;
@@ -98,13 +101,17 @@ fn parse_query(v: &[u8]) -> Result<(Query, usize)> {
     let mut op_start = 0;
     let mut op_end = 0;
 
-    while let Some(b) = bytes.peek() {
+    let mut i = 0;
+
+    while i < bytes.len() {
+        let &b = unsafe { bytes.get_unchecked(i) };
+
         match b {
             b'!' | b'=' | b'<' | b'>' | b'%' => {
                 if depth == 1 {
                     if !op_exist {
                         op_exist = true;
-                        op_start = bytes.position();
+                        op_start = i;
                         op_end = op_start;
                     } else {
                         op_end += 1;
@@ -117,14 +124,14 @@ fn parse_query(v: &[u8]) -> Result<(Query, usize)> {
             b']' | b')' => {
                 depth -= 1;
                 if depth == 0 {
-                    match bytes.next() {
+                    match bytes.get(i + 1) {
                         Some(b'#') => {
                             q.set_all(true);
-                            end = bytes.position();
-                            bytes.next();
+                            end = i;
+                            i += 1;
                         }
-                        Some(_) => end = bytes.position() - 1,
-                        None => end = bytes.position(),
+                        Some(_) => end = i - 1,
+                        None => end = i,
                     }
                     break;
                 }
@@ -132,82 +139,68 @@ fn parse_query(v: &[u8]) -> Result<(Query, usize)> {
             b' ' => (),
             _ => {
                 if op_exist {
-                    let (val, offset) = parser_query_value(bytes.tail(v))?;
+                    let (val, offset) = parser_query_value(&v[i..])?;
                     if val.exists() {
                         q.set_val(val);
                     }
                     if offset > 1 {
-                        bytes.forward(offset - 1);
+                        i += offset - 1;
                     }
                 }
             }
         };
 
-        bytes.next();
+        i += 1;
     }
 
     q.set_on(true);
 
     if op_exist {
         q.set_path(util::trim_space_u8(&v[..op_start]));
-        q.set_op(unsafe { std::str::from_utf8_unchecked(bytes.slice(op_start, op_end)) });
+        q.set_op(unsafe { std::str::from_utf8_unchecked(v.get_unchecked(op_start..op_end + 1)) });
     } else if end > 0 {
         q.set_path(util::trim_space_u8(&v[..end + 1]));
     } else {
         q.set_path(util::trim_space_u8(v));
     }
 
-    Ok((q, bytes.offset()))
+    Ok((q, i))
 }
 
-fn parser_query_value(v: &[u8]) -> Result<(QueryValue, usize)> {
-    let mut bytes = Bytes::new(v);
-    if let Some(b) = bytes.peek() {
-        let value = match b {
+fn parser_query_value(bytes: &[u8]) -> Result<(QueryValue, usize)> {
+    if let Some(b) = bytes.first() {
+        let val = match b {
             b't' => {
-                element::read_true(&mut bytes).unwrap();
-                bytes.next();
-                QueryValue::Boolean(true)
+                element::true_u8(bytes)?;
+                (QueryValue::Boolean(true), 4)
             }
             b'f' => {
-                element::read_false(&mut bytes).unwrap();
-                bytes.next();
-                QueryValue::Boolean(false)
+                element::false_u8(bytes)?;
+                (QueryValue::Boolean(false), 5)
             }
             b'n' => {
-                element::read_null(&mut bytes).unwrap();
-                bytes.next();
-                QueryValue::Null
+                element::null_u8(bytes)?;
+                (QueryValue::Null, 4)
             }
             b'"' => {
-                let (start, end) = element::read_str_range(&mut bytes)?;
-                bytes.next();
-                if end - start < 2 {
-                    QueryValue::NotExist
+                let (s, _) = element::string_u8(bytes)?;
+                if s.len() < 2 {
+                    (QueryValue::NotExist, s.len())
                 } else {
-                    let raw = bytes.slice(start + 1, end - 1);
-                    let s = unsafe { std::str::from_utf8_unchecked(raw) };
-                    QueryValue::String(s)
+                    (QueryValue::String(&s[1..s.len() - 1]), s.len())
                 }
-                // Value::Null
             }
             b'0'..=b'9' | b'-' => {
-                let n = Number::from(&mut bytes);
-                QueryValue::F64(n.to_f64())
+                let (n, _) = element::number_u8(bytes)?;
+                (QueryValue::F64(Number::from(n).to_f64()), n.len())
             }
-            _ => QueryValue::NotExist,
+            _ => (QueryValue::NotExist, 0),
         };
 
-        return Ok((value, bytes.offset()));
+        return Ok(val);
     }
 
     Ok((QueryValue::NotExist, 0))
-}
-
-#[allow(dead_code)]
-fn new_query_from_utf8(v: &[u8]) -> Result<Query> {
-    let (q, _) = parse_query(v)?;
-    Ok(q)
 }
 
 #[cfg(test)]
@@ -271,27 +264,27 @@ mod tests {
     #[test]
     fn test_fn_parse_query() {
         let v = "first)".as_bytes();
-        let q = new_query_from_utf8(v);
+        let q = parse_query(v);
 
         let v = "first)#".as_bytes();
-        let q = new_query_from_utf8(v);
+        let q = parse_query(v);
 
         let v = r#"first="name")"#.as_bytes();
-        let q = new_query_from_utf8(v);
+        let q = parse_query(v);
 
         let v = r#"nets.#(=="ig"))"#.as_bytes();
-        let q = new_query_from_utf8(v);
+        let q = parse_query(v);
 
         let v = r#"nets.#(=="ig"))#"#.as_bytes();
-        let q = new_query_from_utf8(v);
+        let q = parse_query(v);
 
         let v = r#"=="ig")"#.as_bytes();
-        let q = new_query_from_utf8(v);
+        let q = parse_query(v);
 
         let v = r#"first=)"#.as_bytes();
-        let q = new_query_from_utf8(v);
+        let q = parse_query(v);
 
         let v = r#"sub_item>7)#.title"#.as_bytes();
-        let q = new_query_from_utf8(v);
+        let q = parse_query(v);
     }
 }

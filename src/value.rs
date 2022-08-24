@@ -1,8 +1,7 @@
+use crate::number::Number;
 use crate::parser;
 use crate::path::Path;
-use crate::reader::Bytes;
 use crate::Result;
-use number::Number;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
@@ -58,7 +57,7 @@ impl<'a> Value<'a> {
         match self {
             Value::Array(s) | Value::Object(s) => {
                 let p = Path::parse(path.as_ref())?;
-                let (a, _left) = parser::bytes_get(s, &p)?;
+                let (a, _left) = parser::bytes_get(s.as_bytes(), &p)?;
                 Ok(a.map(|el| el.to_value()))
             }
             _ => Ok(None),
@@ -153,14 +152,14 @@ impl<'a> Value<'a> {
 
     pub fn as_vec(&self) -> Option<Vec<Value>> {
         match self {
-            Value::Array(s) => parser::bytes_to_vec(s).ok(),
+            Value::Array(s) => parser::bytes_to_vec(s.as_bytes()).ok(),
             _ => None,
         }
     }
 
     pub fn as_object(&self) -> Option<HashMap<&str, Value>> {
         match self {
-            Value::Object(s) => parser::bytes_to_map(s).ok(),
+            Value::Object(s) => parser::bytes_to_map(s.as_bytes()).ok(),
             _ => None,
         }
     }
