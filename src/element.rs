@@ -227,9 +227,6 @@ mod test_string {
 
 pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     let mut i = 1;
-    let mut depth = 1;
-
-    const CHUNK_SIZE: usize = 16;
 
     const CHAR_TABLE: [u8; 256] = {
         let mut table = [0; 256];
@@ -243,39 +240,6 @@ pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
         table
     };
 
-    'outer: while i + CHUNK_SIZE < bytes.len() {
-        for _ in 0..CHUNK_SIZE {
-            let &b = unsafe { bytes.get_unchecked(i) };
-            if CHAR_TABLE[b as usize] == 0 {
-                i += 1;
-                continue;
-            }
-
-            match b {
-                b'"' => {
-                    let input = unsafe { bytes.get_unchecked(i..) };
-                    let (s, _) = string_u8(input).unwrap();
-
-                    i += s.len();
-                    continue 'outer;
-                }
-                b'[' | b'{' => depth += 1,
-                b']' | b'}' => {
-                    depth -= 1;
-                    if depth == 0 {
-                        i += 1;
-                        return Ok(split_at_u8(bytes, i));
-                    }
-                }
-                b'\\' => {
-                    i += 2;
-                    continue 'outer;
-                }
-                _ => (),
-            }
-            i += 1;
-        }
-    }
 
     while i < bytes.len() {
         let &b = unsafe { bytes.get_unchecked(i) };
@@ -285,22 +249,24 @@ pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
         }
 
         match b {
-            b'\\' => {
-                i += 1;
-            }
+            // b'\\' => {
+            //     i += 1;
+            // }
             b'"' => {
                 let input = unsafe { bytes.get_unchecked(i..) };
                 let (s, _) = string_u8(input).unwrap();
                 i += s.len();
                 continue;
             }
-            b'[' | b'{' => depth += 1,
+            b'[' | b'{' => {
+                let input = unsafe { bytes.get_unchecked(i..) };
+                let (s, _) = compound_u8(input).unwrap();
+                i += s.len();
+                continue;
+            },
             b']' | b'}' => {
-                depth -= 1;
-                if depth == 0 {
-                    i += 1;
-                    break;
-                }
+                i += 1;
+                break
             }
             _ => (),
         }
@@ -410,9 +376,9 @@ pub fn number_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     Ok(split_at_u8(bytes, i))
 }
 
-type MakeResult<'a> = Result<(Option<Element<'a>>, &'a [u8])>;
+pub type MakeResult<'a> = Result<(Option<Element<'a>>, &'a [u8])>;
 
-type MakeFn = fn(&[u8]) -> MakeResult;
+pub type MakeFn = fn(&[u8]) -> MakeResult;
 
 fn make_string(input: &[u8]) -> MakeResult {
     string_u8(input).map(|(a, b)| (Some(Element::String(a)), b))
@@ -474,11 +440,10 @@ pub fn read_one(input: &[u8]) -> Result<(Option<Element>, &[u8])> {
     while i < input.len() {
         let b = unsafe { *input.get_unchecked(i) };
 
-
         match MAKER[b as usize] {
             Some(make_fn) => {
                 let input = unsafe { input.get_unchecked(i..) };
-                return make_fn(input)
+                return make_fn(input);
             }
             None => {
                 i += 1;

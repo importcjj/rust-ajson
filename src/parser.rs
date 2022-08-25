@@ -114,41 +114,46 @@ pub fn bytes_get<'a>(bytes: &'a [u8], path: &Path<'a>) -> Result<(Option<Element
     }
 
     let mut i = 0;
-    const CHUNK: usize = 32;
+    // const CHUNK: usize = 32;
 
-    while i + CHUNK < bytes.len() {
-        for _ in 0..CHUNK {
-            let b = unsafe { *bytes.get_unchecked(i) };
-            match b {
-                b'{' => {
-                    let input = unsafe { bytes.get_unchecked(i..) };
-                    return object_bytes_get(input, path);
-                }
-                b'[' => {
-                    let input = unsafe { bytes.get_unchecked(i..) };
-                    return array_bytes_get(input, path);
-                }
+    // while i + CHUNK < bytes.len() {
+    //     for _ in 0..CHUNK {
+    //         let b = unsafe { *bytes.get_unchecked(i) };
+    //         match b {
+    //             b'{' => {
+    //                 let input = unsafe { bytes.get_unchecked(i..) };
+    //                 return object_bytes_get(input, path);
+    //             }
+    //             b'[' => {
+    //                 let input = unsafe { bytes.get_unchecked(i..) };
+    //                 return array_bytes_get(input, path);
+    //             }
 
-                _ => (),
-            }
+    //             _ => (),
+    //         }
 
-            i += 1;
-        }
-    }
+    //         i += 1;
+    //     }
+    // }
+
+    type Getter = for<'a> fn(&'a [u8], &Path<'a>) -> element::MakeResult<'a>;
+
+    const GETTER: [Option<Getter>; 256] = {
+        let mut table: [Option<Getter>; 256] = [None; 256];
+        table[b'{' as usize] = Some(object_bytes_get);
+        table[b'[' as usize] = Some(array_bytes_get);
+
+        table
+    };
 
     while i < bytes.len() {
         let b = unsafe { *bytes.get_unchecked(i) };
-        match b {
-            b'{' => {
+        match GETTER[b as usize] {
+            Some(getter_fn) => {
                 let input = unsafe { bytes.get_unchecked(i..) };
-                return object_bytes_get(input, path);
+                return getter_fn(input, path);
             }
-            b'[' => {
-                let input = unsafe { bytes.get_unchecked(i..) };
-                return array_bytes_get(input, path);
-            }
-
-            _ => {}
+            None => (),
         }
 
         i += 1;
