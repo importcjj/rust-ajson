@@ -1,3 +1,4 @@
+
 use crate::unescape;
 use crate::value::Value;
 use crate::Number;
@@ -147,9 +148,20 @@ pub fn split_at_u8(s: &[u8], mid: usize) -> (&[u8], &[u8]) {
 pub fn string_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     // skip check the first byte
 
+    const TABLE: [u8;256] = {
+        let mut table: [u8;256] = [0;256];
+        table[b'"' as usize] = 1;
+        table[b'\\' as usize] = 1;
+        table
+    };
+
     let mut i = 1;
     while i < bytes.len() {
         let b = unsafe { *bytes.get_unchecked(i) };
+        if TABLE[b as usize] == 0 {
+            i += 1;
+            continue;
+        }
 
         match b {
             b'"' => {
@@ -226,51 +238,65 @@ mod test_string {
 }
 
 pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
-    let mut i = 1;
+    fn skip_one(input: &[u8], _: usize) -> Result<usize> {
+        Ok(1 + input.len())
+    }
 
-    const CHAR_TABLE: [u8; 256] = {
-        let mut table = [0; 256];
-        table['"' as usize] = 1;
-        table['[' as usize] = 1;
-        table[']' as usize] = 1;
-        table['{' as usize] = 1;
-        table['}' as usize] = 1;
-        table['\\' as usize] = 1;
+    fn skip_string(input: &[u8], i: usize) -> Result<usize> {
+        let input = unsafe { input.get_unchecked(i..) };
+        let (s, _) = string_u8(input)?;
+        Ok(s.len())
+    }
 
+    fn skip_compound(input: &[u8], i: usize) -> Result<usize> {
+        let input = unsafe { input.get_unchecked(i..) };
+        let (s, _) = compound_u8(input)?;
+        Ok(s.len())
+    }
+
+    type Traverse = fn(&[u8], i: usize) -> Result<usize>;
+    const TABLE: [Option<Traverse>; 256] = {
+        let mut table: [Option<Traverse>; 256] = [None; 256];
+        table[b'"' as usize] = Some(skip_string);
+        table[b'[' as usize] = Some(skip_compound);
+        table[b'{' as usize] = Some(skip_compound);
+        table[b']' as usize] = Some(skip_one);
+        table[b'}' as usize] = Some(skip_one);
         table
     };
+
+    let mut i = 1;
+    const CHUNK: usize = 8;
+    'outer: while i + CHUNK < bytes.len() {
+        for _ in 0..CHUNK {
+            let &b = unsafe { bytes.get_unchecked(i) };
+            match TABLE[b as usize] {
+                Some(t) => {
+                    i += t(bytes, i)?;
+                    continue 'outer;
+                }
+                None => {
+                    i += 1;
+                }
+            }
+        }
+    }
 
 
     while i < bytes.len() {
         let &b = unsafe { bytes.get_unchecked(i) };
-        if CHAR_TABLE[b as usize] == 0 {
-            i += 1;
-            continue;
-        }
-
-        match b {
-            // b'\\' => {
-            //     i += 1;
-            // }
-            b'"' => {
-                let input = unsafe { bytes.get_unchecked(i..) };
-                let (s, _) = string_u8(input).unwrap();
-                i += s.len();
-                continue;
+        match TABLE[b as usize] {
+            Some(t) => {
+                i += t(bytes, i)?;
             }
-            b'[' | b'{' => {
-                let input = unsafe { bytes.get_unchecked(i..) };
-                let (s, _) = compound_u8(input).unwrap();
-                i += s.len();
-                continue;
-            },
-            b']' | b'}' => {
+            None => {
                 i += 1;
-                break
             }
-            _ => (),
         }
-        i += 1;
+    }
+
+    if i > bytes.len() {
+        i -= bytes.len();
     }
 
     return Ok(split_at_u8(bytes, i));

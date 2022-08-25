@@ -114,27 +114,7 @@ pub fn bytes_get<'a>(bytes: &'a [u8], path: &Path<'a>) -> Result<(Option<Element
     }
 
     let mut i = 0;
-    // const CHUNK: usize = 32;
 
-    // while i + CHUNK < bytes.len() {
-    //     for _ in 0..CHUNK {
-    //         let b = unsafe { *bytes.get_unchecked(i) };
-    //         match b {
-    //             b'{' => {
-    //                 let input = unsafe { bytes.get_unchecked(i..) };
-    //                 return object_bytes_get(input, path);
-    //             }
-    //             b'[' => {
-    //                 let input = unsafe { bytes.get_unchecked(i..) };
-    //                 return array_bytes_get(input, path);
-    //             }
-
-    //             _ => (),
-    //         }
-
-    //         i += 1;
-    //     }
-    // }
 
     type Getter = for<'a> fn(&'a [u8], &Path<'a>) -> element::MakeResult<'a>;
 
