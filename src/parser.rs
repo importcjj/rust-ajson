@@ -128,12 +128,13 @@ pub fn bytes_get<'a>(bytes: &'a [u8], path: &Path<'a>) -> Result<(Option<Element
 
     while i < bytes.len() {
         let b = unsafe { *bytes.get_unchecked(i) };
-        match GETTER[b as usize] {
+        match GETTER[b as usize] { 
+            None => (),
             Some(getter_fn) => {
                 let input = unsafe { bytes.get_unchecked(i..) };
                 return getter_fn(input, path);
             }
-            None => (),
+
         }
 
         i += 1;

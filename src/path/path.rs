@@ -89,18 +89,19 @@ impl<'a> Path<'a> {
     }
 
     pub fn is_match(&self, key: &[u8]) -> bool {
-        let optional_key = if key.contains(&b'\\') {
-            Some(unescape(key))
-        } else {
-            None
-        };
-        let key = optional_key.as_ref().map_or(key, |v| v.as_bytes());
+        // let optional_key = if key.contains(&b'\\') {
+        //     Some(unescape(key))
+        // } else {
+        //     None
+        // };
+        // let key = optional_key.as_ref().map_or(key, |v| v.as_bytes());
         if self.wild {
             #[cfg(feature = "wild")]
             return wild::is_match_u8(key, self.part);
             false
         } else {
-            util::equal_escape_u8(key, self.part)
+            // util::equal_escape_u8(key, self.part)
+            key.eq(self.part)
         }
     }
 
