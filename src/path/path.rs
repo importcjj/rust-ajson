@@ -1,15 +1,15 @@
-use crate::path_parser;
-use crate::sub_selector::SubSelector;
 use std::fmt;
 
 use crate::element::Element;
-use crate::unescape::unescape;
+use crate::unescape;
 use crate::util;
 use crate::value::Value;
-use crate::Result;
-
 #[cfg(feature = "wild")]
 use crate::wild;
+use crate::Result;
+
+use super::parser;
+use super::sub_selector::SubSelector;
 
 static DEFAULT_NONE_QUERY: Query = Query {
     on: false,
@@ -23,7 +23,7 @@ static DEFAULT_NONE_QUERY: Query = Query {
 static DEFAULT_NONE_PATH: Path = Path {
     ok: false,
     part: &[],
-    next: None,
+    next: &[],
     more: false,
     wild: false,
     arrch: false,
@@ -36,9 +36,8 @@ static DEFAULT_NONE_PATH: Path = Path {
 pub struct Path<'a> {
     pub ok: bool,
     pub part: &'a [u8],
-    pub next: Option<Box<Path<'a>>>,
+    pub next: &'a [u8],
     pub query: Option<Query<'a>>,
-
     pub selectors: Option<Vec<SubSelector<'a>>>,
     pub arrsel: bool,
     pub more: bool,
@@ -57,9 +56,7 @@ impl<'a> fmt::Debug for Path<'a> {
         write!(f, " more={}", self.more)?;
         write!(f, " wild={}", self.wild)?;
         write!(f, " arrch={}", self.arrch)?;
-        if self.next.is_some() {
-            write!(f, " next=`{:?}`", self.next.as_ref().unwrap())?;
-        }
+
         if self.selectors.is_some() {
             for sel in self.borrow_selectors() {
                 write!(f, "\n\tselector {:?}", sel)?;
@@ -77,7 +74,7 @@ impl<'a> Path<'a> {
         Path {
             ok: false,
             part: &[],
-            next: None,
+            next: &[],
             more: false,
             wild: false,
             arrch: false,
@@ -87,8 +84,8 @@ impl<'a> Path<'a> {
         }
     }
 
-    pub fn parse(v: &'a [u8]) -> Result<Path<'a>> {
-        path_parser::parse_path(v)
+    pub fn from_slice(v: &'a [u8]) -> Result<Path<'a>> {
+        parser::parse(v)
     }
 
     pub fn is_match(&self, key: &[u8]) -> bool {
@@ -115,14 +112,26 @@ impl<'a> Path<'a> {
         self.more = b;
     }
 
-    pub fn set_next(&mut self, next: Path<'a>) {
-        self.next = Some(Box::new(next));
+    pub fn set_next(&mut self, next: &'a [u8]) {
+        self.next = next;
     }
 
-    pub fn borrow_next(&self) -> &Path<'a> {
-        match self.next {
-            Some(_) => self.next.as_ref().unwrap(),
-            None => &DEFAULT_NONE_PATH,
+    pub fn parse_next(&self) -> Result<Path<'a>> {
+        if self.next.is_empty() {
+            Ok(Path {
+                ok: false,
+                part: &[],
+                next: &[],
+                more: false,
+                wild: false,
+                arrch: false,
+
+                query: None,
+                selectors: None,
+                arrsel: false,
+            })
+        } else {
+            Path::from_slice(self.next)
         }
     }
 
@@ -239,7 +248,7 @@ impl<'a> Query<'a> {
 
     pub fn get_path(&self) -> Result<Path> {
         match self.has_path() {
-            true => path_parser::parse_path(self.path),
+            true => parser::parse(self.path),
             false => Ok(Path::empty()),
         }
     }

@@ -1,12 +1,12 @@
 use crate::element;
-use crate::path::{Path, Query, QueryValue};
-use crate::sub_selector;
-use crate::Result;
-
 use crate::number::Number;
 use crate::util;
+use crate::Result;
 
-pub(super) fn parse_path(v: &[u8]) -> Result<Path> {
+use super::path::{Path, Query, QueryValue};
+use super::sub_selector;
+
+pub(super) fn parse(v: &[u8]) -> Result<Path> {
     if v.is_empty() {
         return Ok(Path::empty());
     }
@@ -36,10 +36,8 @@ pub(super) fn parse_path(v: &[u8]) -> Result<Path> {
                     current_path.set_more(true);
                     i += 1;
 
-                    let next = parse_path(&v[i..])?;
-                    if next.ok {
-                        current_path.set_next(next);
-                    }
+                    current_path.set_next(&v[i..]);
+
                     return Ok(current_path);
                 }
             }
@@ -210,55 +208,55 @@ mod tests {
 
     #[test]
     fn test_invalid_path() {
-        parse_path("friends.{}first]".as_bytes()).unwrap();
+        parse("friends.{}first]".as_bytes()).unwrap();
     }
 
     #[test]
-    fn test_fn_parse_path_from_utf8() {
+    fn test_fn_parse_from_utf8() {
         let v = r#"name"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = r#"#(last=="Murphy")#.first"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = r#"friends.#(first!%"D*")#.last"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = r#"c?ildren.0"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = r#"#(sub_item>7)#.title"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = r#"friends.#(nets."#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = r#"friends.#()#"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = "widget.[window,name].#.name".as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = r#"widget.menu.#(title="help")#.title"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
     }
 
     #[test]
-    fn test_fn_parse_path() {
+    fn test_fn_parse() {
         let v = r#"name"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = r#"#(last=="Murphy")#.first"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = r#"friends.#(first!%"D*")#.last"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = r#"c?ildren.0"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
 
         let v = r#"#(sub_item>7)#.title"#.as_bytes();
-        let p = parse_path(v);
+        let p = parse(v);
     }
 
     #[test]

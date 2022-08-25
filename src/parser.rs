@@ -1,7 +1,7 @@
 use crate::element;
 use crate::element::Element;
 use crate::path::Path;
-use crate::sub_selector::SubSelector;
+use crate::path::SubSelector;
 use crate::value::Value;
 use crate::Error;
 use crate::Result;
@@ -103,7 +103,8 @@ pub fn bytes_get<'a>(bytes: &'a [u8], path: &Path<'a>) -> Result<(Option<Element
         match element {
             Some(element) => {
                 if path.more {
-                    let element = element_get(element, path.borrow_next())?;
+                    let next = path.parse_next()?;
+                    let element = element_get(element, &next)?;
                     return Ok((element, "".as_bytes()));
                 } else {
                     return Ok((Some(element), "".as_bytes()));
@@ -114,7 +115,6 @@ pub fn bytes_get<'a>(bytes: &'a [u8], path: &Path<'a>) -> Result<(Option<Element
     }
 
     let mut i = 0;
-
 
     type Getter = for<'a> fn(&'a [u8], &Path<'a>) -> element::MakeResult<'a>;
 
@@ -146,7 +146,7 @@ fn select_to_object<'a>(input: &'a [u8], sels: &[SubSelector<'a>]) -> Result<Opt
     let mut map = HashMap::new();
 
     for sel in sels {
-        let path = Path::parse(sel.path)?;
+        let path = Path::from_slice(sel.path)?;
         if let (Some(sub_pv), _) = bytes_get(input, &path)? {
             let key = unsafe { str::from_utf8_unchecked(sel.name) };
             map.insert(key, sub_pv);
@@ -160,7 +160,7 @@ fn select_to_array<'a>(input: &'a [u8], sels: &[SubSelector<'a>]) -> Result<Opti
     let mut list = Vec::new();
 
     for sel in sels {
-        let path = Path::parse(sel.path)?;
+        let path = Path::from_slice(sel.path)?;
         if let (Some(sub_pv), _) = bytes_get(input, &path)? {
             list.push(sub_pv)
         }
@@ -188,6 +188,7 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
         return Ok(None);
     }
 
+    let next_path = path.parse_next()?;
     match element {
         Element::Array(s) | Element::Object(s) => {
             let (a, _b) = bytes_get(s, path)?;
@@ -197,7 +198,7 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
             for (key, value) in m.into_iter() {
                 if path.is_match(key.as_bytes()) {
                     if path.more {
-                        return element_get(value, path.borrow_next());
+                        return element_get(value, &next_path);
                     }
                     return Ok(Some(value));
                 }
@@ -214,7 +215,7 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
                 if !elements.is_empty() {
                     let first = elements.into_iter().next().unwrap();
                     if path.more {
-                        return element_get(first, path.borrow_next());
+                        return element_get(first, &next_path);
                     }
                     return Ok(Some(first));
                 }
@@ -226,7 +227,7 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
                 if path.more {
                     let mut results = vec![];
                     for element in elements.into_iter() {
-                        if let Some(sub) = element_get(element, path.borrow_next())? {
+                        if let Some(sub) = element_get(element, &next_path)? {
                             results.push(sub);
                         }
                     }
@@ -267,7 +268,8 @@ fn object_bytes_get<'a>(
         // object key
         if path.is_match(&s[1..s.len() - 1]) {
             return if path.more {
-                bytes_get(input, path.borrow_next())
+                let next_path = path.parse_next()?;
+                bytes_get(input, &next_path)
             } else {
                 element::read_one(input)
             };
@@ -306,11 +308,13 @@ fn array_bytes_get<'a>(
 
     bytes = &bytes[1..];
 
+    let next_path = path.parse_next()?;
+
     loop {
         // index matched
         if get_idx && idx == index {
             return if path.more {
-                bytes_get(bytes, path.borrow_next())
+                bytes_get(bytes, &next_path)
             } else {
                 element::read_one(bytes)
             };
@@ -343,7 +347,7 @@ fn array_bytes_get<'a>(
         index += 1;
 
         if path.more {
-            match element_get(element, path.borrow_next())? {
+            match element_get(element, &next_path)? {
                 Some(el) => element = el,
                 None => continue,
             }

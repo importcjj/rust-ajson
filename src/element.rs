@@ -1,4 +1,3 @@
-
 use crate::unescape;
 use crate::value::Value;
 use crate::Number;
@@ -25,6 +24,7 @@ impl<'a> Element<'a> {
         match &self {
             Element::String(buf) => {
                 let s = unescape(&buf[1..buf.len() - 1]);
+                // let s = unsafe {std::str::from_utf8_unchecked(&buf[1..buf.len() - 1])};
                 Value::String(Cow::Owned(s))
             }
             Element::Object(s) => {
@@ -148,8 +148,8 @@ pub fn split_at_u8(s: &[u8], mid: usize) -> (&[u8], &[u8]) {
 pub fn string_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     // skip check the first byte
 
-    const TABLE: [u8;256] = {
-        let mut table: [u8;256] = [0;256];
+    const TABLE: [u8; 256] = {
+        let mut table: [u8; 256] = [0; 256];
         table[b'"' as usize] = 1;
         table[b'\\' as usize] = 1;
         table
@@ -281,7 +281,6 @@ pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
             }
         }
     }
-
 
     while i < bytes.len() {
         let &b = unsafe { bytes.get_unchecked(i) };

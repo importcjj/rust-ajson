@@ -78,11 +78,11 @@ fn ajson_multi_query(json: &str) {
 }
 
 fn ajson_path_bench() {
-    black_box(ajson::Path::parse("widget.window.name".as_bytes()));
-    black_box(ajson::Path::parse("widget.image.hOffset".as_bytes()));
-    black_box(ajson::Path::parse("widget.text.onMouseUp".as_bytes()));
-    black_box(ajson::Path::parse("widget.debug".as_bytes()));
-    black_box(ajson::Path::parse(
+    black_box(ajson::Path::from_slice("widget.window.name".as_bytes()));
+    black_box(ajson::Path::from_slice("widget.image.hOffset".as_bytes()));
+    black_box(ajson::Path::from_slice("widget.text.onMouseUp".as_bytes()));
+    black_box(ajson::Path::from_slice("widget.debug".as_bytes()));
+    black_box(ajson::Path::from_slice(
         "widget.menu.#(sub_item>7)#.title".as_bytes(),
     ));
 }

@@ -98,8 +98,6 @@ mod element;
 mod number;
 mod parser;
 mod path;
-mod path_parser;
-mod sub_selector;
 mod unescape;
 mod util;
 mod value;
@@ -157,7 +155,7 @@ pub type Result<T> = result::Result<T, Error>;
 /// let v = ajson::get(data, "name").unwrap().unwrap();
 /// ```
 pub fn get<'a>(json: &'a str, path: &'a str) -> Result<Option<Value<'a>>> {
-    let path = path::Path::parse(path.as_bytes())?;
+    let path = path::Path::from_slice(path.as_bytes())?;
     let (a, _left) = parser::bytes_get(json.as_bytes(), &path)?;
     Ok(a.map(|el| el.to_value()))
 }

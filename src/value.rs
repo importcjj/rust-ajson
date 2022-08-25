@@ -56,7 +56,7 @@ impl<'a> Value<'a> {
     pub fn get(&self, path: &'a str) -> Result<Option<Value>> {
         match self {
             Value::Array(s) | Value::Object(s) => {
-                let p = Path::parse(path.as_ref())?;
+                let p = Path::from_slice(path.as_ref())?;
                 let (a, _left) = parser::bytes_get(s.as_bytes(), &p)?;
                 Ok(a.map(|el| el.to_value()))
             }
