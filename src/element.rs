@@ -410,81 +410,80 @@ pub fn number_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     Ok(split_at_u8(bytes, i))
 }
 
+type MakeResult<'a> = Result<(Option<Element<'a>>, &'a [u8])>;
+
+type MakeFn = fn(&[u8]) -> MakeResult;
+
+fn make_string(input: &[u8]) -> MakeResult {
+    string_u8(input).map(|(a, b)| (Some(Element::String(a)), b))
+}
+
+fn make_true(input: &[u8]) -> MakeResult {
+    true_u8(input).map(|(a, b)| (Some(Element::Boolean(a)), b))
+}
+
+fn make_false(input: &[u8]) -> MakeResult {
+    false_u8(input).map(|(a, b)| (Some(Element::Boolean(a)), b))
+}
+
+fn make_null(input: &[u8]) -> MakeResult {
+    null_u8(input).map(|(a, b)| (Some(Element::Null(a)), b))
+}
+
+fn make_number(input: &[u8]) -> MakeResult {
+    number_u8(input).map(|(a, b)| (Some(Element::Number(a)), b))
+}
+
+fn make_array(input: &[u8]) -> MakeResult {
+    compound_u8(input).map(|(a, b)| (Some(Element::Array(a)), b))
+}
+
+fn make_object(input: &[u8]) -> MakeResult {
+    compound_u8(input).map(|(a, b)| (Some(Element::Object(a)), b))
+}
+
 pub fn read_one(input: &[u8]) -> Result<(Option<Element>, &[u8])> {
     let mut i = 0;
 
-    const TABLE: [u8; 256] = {
-        let mut table = [0; 256];
-        table[b'"' as usize] = 1;
-        table[b't' as usize] = 1;
-        table[b'f' as usize] = 1;
-        table[b'n' as usize] = 1;
-        table[b'{' as usize] = 1;
-        table[b'}' as usize] = 1;
-        table[b'[' as usize] = 1;
-        table[b']' as usize] = 1;
-        table[b'0' as usize] = 1;
-        table[b'1' as usize] = 1;
-        table[b'2' as usize] = 1;
-        table[b'3' as usize] = 1;
-        table[b'4' as usize] = 1;
-        table[b'5' as usize] = 1;
-        table[b'6' as usize] = 1;
-        table[b'7' as usize] = 1;
-        table[b'8' as usize] = 1;
-        table[b'9' as usize] = 1;
-        table[b'-' as usize] = 1;
-        table[b'.' as usize] = 1;
+    const MAKER: [Option<MakeFn>; 256] = {
+        let mut table: [Option<MakeFn>; 256] = [None; 256];
+        table[b'"' as usize] = Some(make_string);
+        table[b't' as usize] = Some(make_true);
+        table[b'f' as usize] = Some(make_false);
+        table[b'n' as usize] = Some(make_null);
+        table[b'{' as usize] = Some(make_object);
+        table[b'}' as usize] = Some(|input| Ok((None, input)));
+        table[b'[' as usize] = Some(make_array);
+        table[b']' as usize] = Some(|input| Ok((None, input)));
+        table[b'0' as usize] = Some(make_number);
+        table[b'1' as usize] = Some(make_number);
+        table[b'2' as usize] = Some(make_number);
+        table[b'3' as usize] = Some(make_number);
+        table[b'4' as usize] = Some(make_number);
+        table[b'5' as usize] = Some(make_number);
+        table[b'6' as usize] = Some(make_number);
+        table[b'7' as usize] = Some(make_number);
+        table[b'8' as usize] = Some(make_number);
+        table[b'9' as usize] = Some(make_number);
+        table[b'-' as usize] = Some(make_number);
+        table[b'.' as usize] = Some(make_number);
 
         table
     };
 
     while i < input.len() {
         let b = unsafe { *input.get_unchecked(i) };
-        if TABLE[b as usize] == 0 {
-            i += 1;
-            continue;
-        }
 
-        match b {
-            b'"' => {
+
+        match MAKER[b as usize] {
+            Some(make_fn) => {
                 let input = unsafe { input.get_unchecked(i..) };
-                let (a, b) = string_u8(input)?;
-                return Ok((Some(Element::String(a)), b));
+                return make_fn(input)
             }
-            b't' => {
-                let input = unsafe { input.get_unchecked(i..) };
-                let (a, b) = true_u8(input)?;
-                return Ok((Some(Element::Boolean(a)), b));
+            None => {
+                i += 1;
             }
-            b'f' => {
-                let input = unsafe { input.get_unchecked(i..) };
-                let (a, b) = false_u8(input)?;
-                return Ok((Some(Element::Boolean(a)), b));
-            }
-            b'n' => {
-                let input = unsafe { input.get_unchecked(i..) };
-                let (a, b) = null_u8(input)?;
-                return Ok((Some(Element::Null(a)), b));
-            }
-            b'{' => {
-                let input = unsafe { input.get_unchecked(i..) };
-                let (a, b) = compound_u8(input)?;
-                return Ok((Some(Element::Object(a)), b));
-            }
-            b'[' => {
-                let input = unsafe { input.get_unchecked(i..) };
-                let (a, b) = compound_u8(input)?;
-                return Ok((Some(Element::Array(a)), b));
-            }
-            b'0'..=b'9' | b'-' | b'.' => {
-                let input = unsafe { input.get_unchecked(i..) };
-                let (a, b) = number_u8(input)?;
-                return Ok((Some(Element::Number(a)), b));
-            }
-            b'}' | b']' => return Ok((None, "".as_bytes())),
-            _ => (),
-        };
+        }
     }
     Ok((None, "".as_bytes()))
 }
