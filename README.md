@@ -25,11 +25,7 @@ Inspiration comes from [gjson](https://github.com/tidwall/gjson) in golang
 Add it to your `Cargo.toml` file:
 ```
 [dependencies]
-ajson = "0.2"
-```
-Then add it to your code:
-```rust
-extern crate ajson;
+ajson = "0.3"
 ```
 
 ## Todo
@@ -55,7 +51,7 @@ let data = r#"
 }
 "#;
 
-let name = ajson::get(data, "project.name").unwrap();
+let name = ajson::get(data, "project.name").unwrap().unwrap();
 println!("{}", name.as_str()); // ajson
 ```
 
@@ -131,9 +127,9 @@ Basically, you can use selectors to assemble whatever you want, and of course, t
 ```
 
 ```rust
-ajson::get(json, "name.[first,last]").unwrap().to_vec();
-ajson::get(json, "name.first").unwrap(); 
-ajson::get(json, "name.last").unwrap();
+ajson::get(json, "name.[first,last]").unwrap().unwrap().to_vec();
+ajson::get(json, "name.first").unwrap().unwrap(); 
+ajson::get(json, "name.last").unwrap().unwrap();
 ```
 
 ## Value
@@ -173,32 +169,6 @@ value.is_array() -> bool
 value.is_null() -> bool
 ```
 
-
-## get or parse?
-
-`Parse` needs to read a complete json element, but `get` returns the result immediately, so `get` is recommended if you want to simply get a value
-
-## io::Read
-
-Not only string, AJSON also can parse JSON from io::Read.
-
-```rust
-use std::fs::File;
-
-let f = file::Open("path/to/json").unwrap();
-let json = ajson::parse_from_read(f).unwrap();
-let value = json.get("a.b").unwrap();
-println!("{}", value.as_str());
-```
-
-## Validate
-
-AJSON can help you get the desired value from flawed JSON, but it's worth being more careful because of its looseness.
-
-`be careful!!!`
-
-Maybe need a validate function 🤔
-
 ## Performance
 
 `$ cargo bench`
@@ -208,22 +178,54 @@ Maybe need a validate function 🤔
 * [rust-json](https://github.com/maciejhirsz/json-rust)
 
 ```
-ajson benchmark         time:   [6.7000 us 6.8023 us 6.9081 us]                             
-                        change: [-1.8368% -0.4152% +1.0466%] (p = 0.58 > 0.05)
+ajson benchmark         time:   [2.0816 us 2.0865 us 2.0917 us]                             
+                        change: [+0.6172% +0.9272% +1.2430%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 11 outliers among 100 measurements (11.00%)
+  7 (7.00%) high mild
+  4 (4.00%) high severe
+
+serde_json benchmark    time:   [23.033 us 23.076 us 23.119 us]                                  
+                        change: [-0.7185% -0.3455% +0.0230%] (p = 0.07 > 0.05)
                         No change in performance detected.
+Found 7 outliers among 100 measurements (7.00%)
+  6 (6.00%) high mild
+  1 (1.00%) high severe
+
+json-rust benchmark     time:   [12.225 us 12.289 us 12.381 us]                                 
+                        change: [-2.6200% -1.1789% +0.8442%] (p = 0.19 > 0.05)
+                        No change in performance detected.
+Found 9 outliers among 100 measurements (9.00%)
+  5 (5.00%) high mild
+  4 (4.00%) high severe
+
+ajson selector          time:   [1.1523 us 1.1561 us 1.1604 us]                            
+                        change: [+0.1567% +0.7278% +1.2945%] (p = 0.01 < 0.05)
+                        Change within noise threshold.
 Found 3 outliers among 100 measurements (3.00%)
   3 (3.00%) high mild
 
-serde_json benchmark    time:   [48.196 us 48.543 us 48.947 us]                                  
-                        change: [+2.9073% +4.4909% +6.3532%] (p = 0.00 < 0.05)
-                        Performance has regressed.
+ajson multi query       time:   [559.19 ns 559.96 ns 560.77 ns]                               
+                        change: [-1.4268% -1.0380% -0.6698%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
 Found 3 outliers among 100 measurements (3.00%)
-  1 (1.00%) high mild
-  2 (2.00%) high severe
+  3 (3.00%) high mild
 
-json-rust benchmark     time:   [24.540 us 24.773 us 25.061 us]                                 
-                        change: [+4.8288% +6.0452% +7.4633%] (p = 0.00 < 0.05)
-                        Performance has regressed.
+serde derive            time:   [4.5301 us 4.5403 us 4.5507 us]                          
+                        change: [-2.3423% -1.9438% -1.5697%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+
+serde derive multi query                        
+                        time:   [956.86 ns 962.64 ns 970.05 ns]
+                        change: [-1.7069% -1.0299% -0.2924%] (p = 0.01 < 0.05)
+                        Change within noise threshold.
+Found 9 outliers among 100 measurements (9.00%)
+  3 (3.00%) high mild
+  6 (6.00%) high severe
+
+nom json bench          time:   [2.9468 us 2.9515 us 2.9566 us]
 Found 5 outliers among 100 measurements (5.00%)
   4 (4.00%) high mild
   1 (1.00%) high severe

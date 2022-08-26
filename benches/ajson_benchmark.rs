@@ -348,44 +348,44 @@ fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| ajson_bench(black_box(BENCH_DATA)))
     });
 
-    c.bench_function("gjson benchmark", |b| {
-        b.iter(|| gjson_bench(black_box(BENCH_DATA)))
+    // c.bench_function("gjson benchmark", |b| {
+    //     b.iter(|| gjson_bench(black_box(BENCH_DATA)))
+    // });
+
+    c.bench_function("serde_json benchmark", |b| {
+        b.iter(|| serde_json_bench(black_box(BENCH_DATA)))
     });
 
-    // c.bench_function("serde_json benchmark", |b| {
-    //     b.iter(|| serde_json_bench(black_box(BENCH_DATA)))
-    // });
+    c.bench_function("json-rust benchmark", |b| {
+        b.iter(|| json_rust_bench(black_box(BENCH_DATA)))
+    });
 
-    // c.bench_function("json-rust benchmark", |b| {
-    //     b.iter(|| json_rust_bench(black_box(BENCH_DATA)))
-    // });
-
-    // c.bench_function("ajson selector", |b| {
-    //     b.iter(|| ajson_selector(black_box(BENCH_DATA)))
-    // });
+    c.bench_function("ajson selector", |b| {
+        b.iter(|| ajson_selector(black_box(BENCH_DATA)))
+    });
 
     // c.bench_function("gjson selector", |b| {
     //     b.iter(|| gjson_selector(black_box(BENCH_DATA)))
     // });
 
-    // c.bench_function("ajson multi query", |b| {
-    //     b.iter(|| ajson_multi_query(black_box(BENCH_DATA)))
-    // });
+    c.bench_function("ajson multi query", |b| {
+        b.iter(|| ajson_multi_query(black_box(BENCH_DATA)))
+    });
 
     // c.bench_function("gjson multi query", |b| {
     //     b.iter(|| gjson_multi_query(black_box(BENCH_DATA)))
     // });
 
-    // c.bench_function("serde derive", |b| {
-    //     b.iter(|| serde_json_derive_bench(black_box(BENCH_DATA)))
-    // });
-    // c.bench_function("serde derive multi query", |b| {
-    //     b.iter(|| serde_json_derive_multi_query(black_box(BENCH_DATA)))
-    // });
+    c.bench_function("serde derive", |b| {
+        b.iter(|| serde_json_derive_bench(black_box(BENCH_DATA)))
+    });
+    c.bench_function("serde derive multi query", |b| {
+        b.iter(|| serde_json_derive_multi_query(black_box(BENCH_DATA)))
+    });
 
-    // c.bench_function("nom json bench", |b| {
-    //     b.iter(|| nom_json_bench(black_box(BENCH_DATA)))
-    // });
+    c.bench_function("nom json bench", |b| {
+        b.iter(|| nom_json_bench(black_box(BENCH_DATA)))
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);
