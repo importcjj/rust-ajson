@@ -1,6 +1,8 @@
 use std::fmt;
 
 use super::{parser, path::DEFAULT_NONE_PATH, Path};
+#[cfg(feature = "wild")]
+use crate::wild;
 use crate::{element::Element, Result, Value};
 
 pub const DEFAULT_NONE_QUERY: Query = Query {
