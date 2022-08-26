@@ -8,11 +8,11 @@ use super::sub_selector;
 
 pub(super) fn parse(v: &[u8]) -> Result<Path> {
     if v.is_empty() {
-        return Ok(Path::empty());
+        return Ok(Default::default());
     }
 
     let bytes = v;
-    let mut current_path = Path::empty();
+    let mut current_path = Path::default();
     let mut depth = 0;
     let mut i = 0;
 
@@ -22,6 +22,7 @@ pub(super) fn parse(v: &[u8]) -> Result<Path> {
         match b {
             b'\\' => {
                 i += 2;
+                current_path.set_esc(true);
                 continue;
             }
             b']' | b')' | b'}' => {
@@ -181,7 +182,7 @@ fn parser_query_value(bytes: &[u8]) -> Result<(QueryValue, usize)> {
                 (QueryValue::Null, 4)
             }
             b'"' => {
-                let (s, _) = element::string_u8(bytes)?;
+                let (s, _, esc) = element::string_u8(bytes)?;
                 if s.len() < 2 {
                     (QueryValue::NotExist, s.len())
                 } else {

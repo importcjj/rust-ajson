@@ -42,8 +42,6 @@ pub fn bytes_to_vec(mut bytes: &[u8]) -> Result<Vec<Value>> {
 
 pub fn bytes_to_map(mut bytes: &[u8]) -> Result<HashMap<&str, Value>> {
     let mut m = HashMap::new();
-    let mut key_cache: Option<&str> = None;
-    let mut count = 0;
 
     let mut i = 0;
     while i < bytes.len() {
@@ -62,29 +60,36 @@ pub fn bytes_to_map(mut bytes: &[u8]) -> Result<HashMap<&str, Value>> {
         return Err(Error::Object);
     }
 
-    bytes = &bytes[i + 1..];
+    i += 1;
 
-    loop {
-        let (a, b) = element::read_one(bytes)?;
+    while i < bytes.len() {
+        let &b = unsafe { bytes.get_unchecked(i) };
+        if b == b'}' {
+            break;
+        }
+
+        if b != b'"' {
+            i += 1;
+            continue;
+        }
+
+        let input = unsafe { bytes.get_unchecked(i..) };
+        let (key, b, esc) = element::string_u8(input)?;
         bytes = b;
-        match a {
+
+        let (val_element, b) = element::read_one(bytes)?;
+        bytes = b;
+        i = 0;
+        match val_element {
             Some(element) => {
-                count += 1;
-                if count % 2 == 1 {
-                    match element {
-                        Element::String(s) => {
-                            let s = unsafe { std::str::from_utf8_unchecked(&s[1..s.len() - 1]) };
-                            key_cache = Some(s);
-                        }
-                        _ => return Err(Error::ObjectKey),
-                    };
-                } else {
-                    m.insert(key_cache.take().unwrap(), element.to_value());
-                }
+                let s = unsafe { std::str::from_utf8_unchecked(&key[1..key.len() - 1]) };
+                let value = element.to_value();
+                m.insert(s, value);
             }
             None => break,
         }
     }
+
 
     Ok(m)
 }
@@ -128,13 +133,12 @@ pub fn bytes_get<'a>(bytes: &'a [u8], path: &Path<'a>) -> Result<(Option<Element
 
     while i < bytes.len() {
         let b = unsafe { *bytes.get_unchecked(i) };
-        match GETTER[b as usize] { 
+        match GETTER[b as usize] {
             None => (),
             Some(getter_fn) => {
                 let input = unsafe { bytes.get_unchecked(i..) };
                 return getter_fn(input, path);
             }
-
         }
 
         i += 1;
@@ -149,8 +153,7 @@ fn select_to_object<'a>(input: &'a [u8], sels: &[SubSelector<'a>]) -> Result<Opt
     for sel in sels {
         let path = Path::from_slice(sel.path)?;
         if let (Some(sub_pv), _) = bytes_get(input, &path)? {
-            let key = unsafe { str::from_utf8_unchecked(sel.name) };
-            map.insert(key, sub_pv);
+            map.insert((sel.name, false), sub_pv);
         }
     }
 
@@ -197,7 +200,7 @@ fn element_get<'a>(element: Element<'a>, path: &Path<'a>) -> Result<Option<Eleme
         }
         Element::Map(m) => {
             for (key, value) in m.into_iter() {
-                if path.is_match(key.as_bytes()) {
+                if path.is_match(key.0, key.1) {
                     if path.more {
                         return element_get(value, &next_path);
                     }
@@ -263,11 +266,11 @@ fn object_bytes_get<'a>(
         }
 
         input = unsafe { input.get_unchecked(i..) };
-        let (s, left) = element::string_u8(input)?;
+        let (s, left, esc) = element::string_u8(input)?;
         input = left;
 
         // object key
-        if path.is_match(&s[1..s.len() - 1]) {
+        if path.is_match(&s[1..s.len() - 1], esc) {
             return if path.more {
                 let next_path = path.parse_next()?;
                 bytes_get(input, &next_path)

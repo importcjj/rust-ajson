@@ -11,7 +11,7 @@ use crate::Result;
 use super::parser;
 use super::sub_selector::SubSelector;
 
-static DEFAULT_NONE_QUERY: Query = Query {
+const DEFAULT_NONE_QUERY: Query = Query {
     on: false,
     path: &[],
     key: None,
@@ -20,7 +20,7 @@ static DEFAULT_NONE_QUERY: Query = Query {
     all: false,
 };
 
-static DEFAULT_NONE_PATH: Path = Path {
+const DEFAULT_NONE_PATH: Path = Path {
     ok: false,
     part: &[],
     next: &[],
@@ -31,8 +31,10 @@ static DEFAULT_NONE_PATH: Path = Path {
     query: None,
     selectors: None,
     arrsel: false,
+    esc: false,
 };
 
+#[derive(Default)]
 pub struct Path<'a> {
     pub ok: bool,
     pub part: &'a [u8],
@@ -43,6 +45,7 @@ pub struct Path<'a> {
     pub more: bool,
     pub wild: bool,
     pub arrch: bool,
+    pub esc: bool,
 }
 
 impl<'a> fmt::Debug for Path<'a> {
@@ -70,25 +73,11 @@ impl<'a> fmt::Debug for Path<'a> {
 }
 
 impl<'a> Path<'a> {
-    pub fn empty() -> Path<'a> {
-        Path {
-            ok: false,
-            part: &[],
-            next: &[],
-            more: false,
-            wild: false,
-            arrch: false,
-            query: None,
-            selectors: None,
-            arrsel: false,
-        }
-    }
-
     pub fn from_slice(v: &'a [u8]) -> Result<Path<'a>> {
         parser::parse(v)
     }
 
-    pub fn is_match(&self, key: &[u8]) -> bool {
+    pub fn is_match(&self, key: &[u8], key_esc: bool) -> bool {
         // let optional_key = if key.contains(&b'\\') {
         //     Some(unescape(key))
         // } else {
@@ -99,8 +88,12 @@ impl<'a> Path<'a> {
             #[cfg(feature = "wild")]
             return wild::is_match_u8(key, self.part);
             false
+        } else if key_esc {
+            let s = unescape(key);
+            s.as_bytes().eq(self.part)
+        } else if self.esc {
+            util::equal_escape_u8(key, self.part)
         } else {
-            // util::equal_escape_u8(key, self.part)
             key.eq(self.part)
         }
     }
@@ -119,18 +112,7 @@ impl<'a> Path<'a> {
 
     pub fn parse_next(&self) -> Result<Path<'a>> {
         if self.next.is_empty() {
-            Ok(Path {
-                ok: false,
-                part: &[],
-                next: &[],
-                more: false,
-                wild: false,
-                arrch: false,
-
-                query: None,
-                selectors: None,
-                arrsel: false,
-            })
+            Ok(Path::default())
         } else {
             Path::from_slice(self.next)
         }
@@ -151,6 +133,10 @@ impl<'a> Path<'a> {
 
     pub fn set_q(&mut self, q: Query<'a>) {
         self.query = Some(q);
+    }
+
+    pub fn set_esc(&mut self, b: bool) {
+        self.esc = b;
     }
 
     pub fn has_query(&self) -> bool {
@@ -250,7 +236,7 @@ impl<'a> Query<'a> {
     pub fn get_path(&self) -> Result<Path> {
         match self.has_path() {
             true => parser::parse(self.path),
-            false => Ok(Path::empty()),
+            false => Ok(Path::default()),
         }
     }
 

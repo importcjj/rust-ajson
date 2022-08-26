@@ -8,7 +8,7 @@ use std::str;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Element<'a> {
-    String(&'a [u8]),
+    String(&'a [u8], bool),
     Object(&'a [u8]),
     Array(&'a [u8]),
     Null(&'a [u8]),
@@ -16,16 +16,20 @@ pub enum Element<'a> {
     Number(&'a [u8]),
     Count(usize),
     List(Vec<Element<'a>>),
-    Map(HashMap<&'a str, Element<'a>>),
+    Map(HashMap<(&'a [u8], bool), Element<'a>>),
 }
 
 impl<'a> Element<'a> {
     pub fn to_value(&self) -> Value<'a> {
         match &self {
-            Element::String(buf) => {
-                let s = unescape(&buf[1..buf.len() - 1]);
-                // let s = unsafe {std::str::from_utf8_unchecked(&buf[1..buf.len() - 1])};
-                Value::String(Cow::Owned(s))
+            Element::String(buf, esc) => {
+                if *esc {
+                    let s = unescape(&buf[1..buf.len() - 1]);
+                    Value::String(Cow::Owned(s))
+                } else {
+                    let s = unsafe { std::str::from_utf8_unchecked(&buf[1..buf.len() - 1]) };
+                    Value::String(Cow::Borrowed(s))
+                }
             }
             Element::Object(s) => {
                 let s = unsafe { std::str::from_utf8_unchecked(s) };
@@ -65,9 +69,17 @@ impl<'a> Element<'a> {
                 let size = elements.len();
                 let mut count = 0;
 
-                for (key, element) in elements {
+                for ((buf, esc), element) in elements {
                     count += 1;
-                    object_string.push_str(key);
+
+                    if *esc {
+                        let s = unescape(&buf[1..buf.len() - 1]);
+                        object_string.push_str(s.as_str());
+                    } else {
+                        let s = unsafe { std::str::from_utf8_unchecked(buf) };
+                        object_string.push_str(s);
+                    };
+
                     object_string.push(':');
                     element.write_to_string_buffer(&mut object_string);
                     if count < size {
@@ -84,8 +96,17 @@ impl<'a> Element<'a> {
 
     fn write_to_string_buffer(&self, buffer: &mut String) {
         match *self {
-            Element::String(s)
-            | Element::Object(s)
+            Element::String(buf, esc) => {
+                if esc {
+                    let s = unescape(&buf[1..buf.len() - 1]);
+                    buffer.push_str(s.as_str());
+                } else {
+                    let s = unsafe { std::str::from_utf8_unchecked(buf) };
+                    buffer.push_str(s);
+                };
+            }
+
+            Element::Object(s)
             | Element::Array(s)
             | Element::Boolean(s)
             | Element::Number(s)
@@ -145,7 +166,7 @@ pub fn split_at_u8(s: &[u8], mid: usize) -> (&[u8], &[u8]) {
     unsafe { (s.get_unchecked(..mid), s.get_unchecked(mid..s.len())) }
 }
 
-pub fn string_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
+pub fn string_u8(bytes: &[u8]) -> Result<(&[u8], &[u8], bool)> {
     // skip check the first byte
 
     const TABLE: [u8; 256] = {
@@ -156,6 +177,7 @@ pub fn string_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     };
 
     let mut i = 1;
+    let mut esc = false;
     while i < bytes.len() {
         let b = unsafe { *bytes.get_unchecked(i) };
         if TABLE[b as usize] == 0 {
@@ -169,6 +191,7 @@ pub fn string_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
                 break;
             }
             b'\\' => {
+                esc = true;
                 i += 1;
             }
             _ => {}
@@ -177,7 +200,9 @@ pub fn string_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
         i += 1;
     }
 
-    Ok(split_at_u8(bytes, i))
+    let (a, b) = split_at_u8(bytes, i);
+
+    Ok((a, b, esc))
 }
 
 pub fn string(input: &str) -> Result<(&str, &str)> {
@@ -244,7 +269,7 @@ pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
 
     fn skip_string(input: &[u8], i: usize) -> Result<usize> {
         let input = unsafe { input.get_unchecked(i..) };
-        let (s, _) = string_u8(input)?;
+        let (s, _, _) = string_u8(input)?;
         Ok(s.len())
     }
 
@@ -406,7 +431,7 @@ pub type MakeResult<'a> = Result<(Option<Element<'a>>, &'a [u8])>;
 pub type MakeFn = fn(&[u8]) -> MakeResult;
 
 fn make_string(input: &[u8]) -> MakeResult {
-    string_u8(input).map(|(a, b)| (Some(Element::String(a)), b))
+    string_u8(input).map(|(a, b, esc)| (Some(Element::String(a, esc)), b))
 }
 
 fn make_true(input: &[u8]) -> MakeResult {
