@@ -1,10 +1,6 @@
-use crate::unescape;
-use crate::value::Value;
-use crate::Number;
-use crate::Result;
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::str;
+use std::{borrow::Cow, collections::HashMap, str};
+
+use crate::{unescape, value::Value, Number, Result};
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Element<'a> {
@@ -394,8 +390,7 @@ pub fn compound(input: &str) -> Result<(&str, &str)> {
 
 #[cfg(test)]
 mod test_compound {
-    use super::compound;
-    use super::Result;
+    use super::{compound, Result};
 
     #[test]
     fn test_compound() -> Result<()> {

@@ -102,17 +102,16 @@ mod unescape;
 mod util;
 mod value;
 
-pub use number::Number;
-pub use path::Path;
-pub use unescape::unescape;
-pub use value::Value;
+use std::result;
 
 #[doc(hidden)]
 pub use element::compound;
 #[doc(hidden)]
 pub use element::compound_u8;
-
-use std::result;
+pub use number::Number;
+pub use path::Path;
+pub use unescape::unescape;
+pub use value::Value;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Error {

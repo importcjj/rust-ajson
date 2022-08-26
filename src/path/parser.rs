@@ -1,10 +1,9 @@
-use crate::element;
-use crate::number::Number;
-use crate::util;
-use crate::Result;
-
-use super::path::{Path, Query, QueryValue};
-use super::sub_selector;
+use super::{
+    path::Path,
+    query::{Query, QueryValue},
+    sub_selector,
+};
+use crate::{element, number::Number, util, Result};
 
 pub(super) fn parse(v: &[u8]) -> Result<Path> {
     if v.is_empty() {

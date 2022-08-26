@@ -1,12 +1,12 @@
-use crate::element;
-use crate::element::Element;
-use crate::path::Path;
-use crate::path::SubSelector;
-use crate::value::Value;
-use crate::Error;
-use crate::Result;
-use std::collections::HashMap;
-use std::str;
+use std::{collections::HashMap, str};
+
+use crate::{
+    element,
+    element::Element,
+    path::{Path, SubSelector},
+    value::Value,
+    Error, Result,
+};
 
 pub fn bytes_to_vec(mut bytes: &[u8]) -> Result<Vec<Value>> {
     let mut arr = Vec::new();

@@ -1,8 +1,7 @@
 #[macro_use]
 extern crate criterion;
 
-use criterion::black_box;
-use criterion::Criterion;
+use criterion::{black_box, Criterion};
 extern crate ajson;
 extern crate json;
 
@@ -11,9 +10,8 @@ extern crate serde;
 extern crate nom;
 extern crate serde_json;
 mod nom_json;
-use nom::error::ErrorKind;
-
 use json::JsonValue;
+use nom::error::ErrorKind;
 use serde_json::Value;
 
 #[allow(dead_code)]
@@ -265,7 +263,7 @@ fn serde_json_derive_bench(json: &str) {
         #[derive(Deserialize)]
         struct Item {
             sub_item: i64,
-            title: Value,
+            title:    Value,
         }
         let e = serde_json::from_str::<Main>(json).unwrap();
         black_box(
@@ -326,7 +324,7 @@ fn serde_json_derive_multi_query(json: &str) {
     #[derive(Deserialize)]
     struct Widget {
         image: Image,
-        text: Text,
+        text:  Text,
     }
     #[derive(Deserialize)]
     struct Image {

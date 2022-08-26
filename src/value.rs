@@ -1,12 +1,6 @@
-use crate::number::Number;
-use crate::parser;
-use crate::path::Path;
-use crate::Result;
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::fmt;
-use std::fmt::Formatter;
-use std::str;
+use std::{borrow::Cow, collections::HashMap, fmt, fmt::Formatter, str};
+
+use crate::{number::Number, parser, path::Path, Result};
 
 /// Represents JSON valuue.
 #[derive(PartialEq, Eq, Clone)]
@@ -45,7 +39,7 @@ impl<'a> Value<'a> {
     /// About path syntax, see [here](index.html#syntax).
     /// For more detail, see [`get`](fn.get.html).
     /// ```
-    /// use ajson::{Value, Result};
+    /// use ajson::{Result, Value};
     /// fn main() -> Result<()> {
     ///     let v = Value::Array("[1,2,3]".into());
     ///     let first_num = v.get("0")?.unwrap();

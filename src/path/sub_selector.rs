@@ -1,8 +1,6 @@
-use crate::util;
-use std::fmt;
-use std::str;
+use std::{fmt, str};
 
-use crate::element;
+use crate::{element, util};
 
 pub struct SubSelector<'a> {
     pub name: &'a [u8],

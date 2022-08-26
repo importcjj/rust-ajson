@@ -1,10 +1,10 @@
 extern crate nom;
-use std::ops::Index;
+use std::{collections::HashMap, ops::Index, str};
+
 // extern crate jemallocator;
 
 // #[global_allocator]
 // static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
-
 use nom::{
     branch::alt,
     bytes::complete::{escaped, tag, take_while},
@@ -16,9 +16,6 @@ use nom::{
     sequence::{delimited, preceded, separated_pair, terminated},
     Err, IResult,
 };
-
-use std::collections::HashMap;
-use std::str;
 
 #[derive(Debug, PartialEq)]
 pub enum JsonValue {
