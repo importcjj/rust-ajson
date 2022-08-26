@@ -98,20 +98,22 @@ mod element;
 mod number;
 mod parser;
 mod path;
-mod path_parser;
-mod reader;
-mod sub_selector;
 mod unescape;
 mod util;
 mod value;
 
+use std::result;
+
+#[doc(hidden)]
+pub use element::compound;
+#[doc(hidden)]
+pub use element::compound_u8;
 pub use number::Number;
+pub use path::Path;
 pub use unescape::unescape;
 pub use value::Value;
 
-use std::result;
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     Path,
     Eof,
@@ -152,10 +154,9 @@ pub type Result<T> = result::Result<T, Error>;
 /// let v = ajson::get(data, "name").unwrap().unwrap();
 /// ```
 pub fn get<'a>(json: &'a str, path: &'a str) -> Result<Option<Value<'a>>> {
-    let buf = json.as_bytes();
-    let mut bytes = reader::Bytes::new(buf);
-    let path = path::Path::parse(path.as_bytes())?;
-    Ok(parser::bytes_get(&mut bytes, &path)?.map(|el| el.to_value()))
+    let path = path::Path::from_slice(path.as_bytes())?;
+    let (a, _left) = parser::bytes_get(json.as_bytes(), &path)?;
+    Ok(a.map(|el| el.to_value()))
 }
 
 /// Returns the first JSON value parsed, and it may be having
@@ -174,7 +175,7 @@ pub fn get<'a>(json: &'a str, path: &'a str) -> Result<Option<Value<'a>>> {
 /// }
 /// ```
 pub fn parse(json: &str) -> Result<Option<Value>> {
-    let buf = json.as_bytes();
-    let mut bytes = reader::Bytes::new(buf);
-    Ok(element::read_one(&mut bytes)?.map(|el| el.to_value()))
+    let (parsed, _left) = element::read_one(json.as_bytes())?;
+
+    Ok(parsed.map(|el| el.to_value()))
 }

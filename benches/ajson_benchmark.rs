@@ -1,8 +1,7 @@
 #[macro_use]
 extern crate criterion;
 
-use criterion::black_box;
-use criterion::Criterion;
+use criterion::{black_box, Criterion};
 extern crate ajson;
 extern crate json;
 
@@ -11,9 +10,8 @@ extern crate serde;
 extern crate nom;
 extern crate serde_json;
 mod nom_json;
-use nom::error::ErrorKind;
-
 use json::JsonValue;
+use nom::error::ErrorKind;
 use serde_json::Value;
 
 #[allow(dead_code)]
@@ -61,14 +59,6 @@ static BENCH_DATA: &str = r#"{
     }
 }"#;
 
-// fn fibonacci(n: u64) -> u64 {
-//     match n {
-//         0 => 1,
-//         1 => 1,
-//         n => fibonacci(n-1) + fibonacci(n-2),
-//     }
-// }
-
 fn ajson_selector(json: &str) {
     black_box(
         ajson::get(json, "widget.[image.src,text.data]")
@@ -80,9 +70,19 @@ fn ajson_selector(json: &str) {
 
 fn ajson_multi_query(json: &str) {
     black_box([
-        ajson::get(json, "widget.image.src").unwrap(),
-        ajson::get(json, "widget.text.data").unwrap(),
+        ajson::get(json, "widget.image.src"),
+        ajson::get(json, "widget.text.data"),
     ]);
+}
+
+fn ajson_path_bench() {
+    black_box(ajson::Path::from_slice("widget.window.name".as_bytes()));
+    black_box(ajson::Path::from_slice("widget.image.hOffset".as_bytes()));
+    black_box(ajson::Path::from_slice("widget.text.onMouseUp".as_bytes()));
+    black_box(ajson::Path::from_slice("widget.debug".as_bytes()));
+    black_box(ajson::Path::from_slice(
+        "widget.menu.#(sub_item>7)#.title".as_bytes(),
+    ));
 }
 
 fn ajson_bench(json: &str) {
@@ -105,7 +105,8 @@ fn ajson_bench(json: &str) {
             .as_str(),
     );
     black_box(ajson::get(json, "widget.debug").unwrap().unwrap().as_str());
-    // ajson::get(json, "widget.text").as_map();
+    // black_box(ajson::get(json, "widget.text").unwrap().unwrap().as_object());
+
     black_box(
         ajson::get(json, "widget.menu.#(sub_item>7)#.title")
             .unwrap()
@@ -113,6 +114,27 @@ fn ajson_bench(json: &str) {
             .as_vec(),
     );
     // ajson::get(json, "widget.menu.[1.title,2.options]").as_array();
+}
+
+fn gjson_selector(json: &str) {
+    black_box(gjson::get(json, "widget.[image.src,text.data]").array());
+}
+
+fn gjson_multi_query(json: &str) {
+    black_box([
+        gjson::get(json, "widget.image.src"),
+        gjson::get(json, "widget.text.data"),
+    ]);
+}
+
+fn gjson_bench(json: &str) {
+    black_box(gjson::get(json, "widget.window.name").str());
+    black_box(gjson::get(json, "widget.image.hOffset").f64());
+    black_box(gjson::get(json, "widget.text.onMouseUp").str());
+    black_box(gjson::get(json, "widget.debug").str());
+
+    black_box(gjson::get(json, "widget.menu.#(sub_item>7)#.title").array());
+    // gjson::get(json, "widget.menu.[1.title,2.options]").as_array();
 }
 
 fn json_rust_bench(data: &str) {
@@ -241,7 +263,7 @@ fn serde_json_derive_bench(json: &str) {
         #[derive(Deserialize)]
         struct Item {
             sub_item: i64,
-            title: Value,
+            title:    Value,
         }
         let e = serde_json::from_str::<Main>(json).unwrap();
         black_box(
@@ -256,20 +278,42 @@ fn serde_json_derive_bench(json: &str) {
 }
 
 fn nom_json_bench(json: &str) {
-    if let Ok((_, value)) = nom_json::root::<(&str, ErrorKind)>(json) {
-        black_box(&value["widget"]["window"]["name"].as_str());
-        black_box(&value["widget"]["image"]["hOffset"]);
-        black_box(&value["widget"]["text"]["onMouseUp"].as_str());
-        black_box(&value["widget"]["debug"].as_str());
+    black_box({
+        nom_json::root::<(&str, ErrorKind)>(json).map(|(_, value)| {
+            value["widget"]["window"]["name"].as_str();
+        });
+    });
 
-        let menu = &value["widget"]["menu"];
-        let _v: Vec<&nom_json::JsonValue> = black_box(
-            menu.members()
-                .filter(|x| x["sub_item"].to_f64() > 5.0)
-                .map(|x| &x["title"])
-                .collect(),
-        );
-    };
+    black_box({
+        nom_json::root::<(&str, ErrorKind)>(json).map(|(_, value)| {
+            &value["widget"]["image"]["hOffset"];
+        });
+    });
+
+    black_box({
+        nom_json::root::<(&str, ErrorKind)>(json).map(|(_, value)| {
+            value["widget"]["text"]["onMouseUp"].as_str();
+        });
+    });
+
+    black_box({
+        nom_json::root::<(&str, ErrorKind)>(json).map(|(_, value)| {
+            value["widget"]["debug"].as_str();
+        });
+    });
+
+    black_box({
+        nom_json::root::<(&str, ErrorKind)>(json).map(|(_, value)| {
+            let menu = &value["widget"]["menu"];
+            let v: Vec<&nom_json::JsonValue> = black_box(
+                menu.members()
+                    .filter(|x| x["sub_item"].to_f64() > 5.0)
+                    .map(|x| &x["title"])
+                    .collect(),
+            );
+            1
+        })
+    });
 }
 
 fn serde_json_derive_multi_query(json: &str) {
@@ -280,7 +324,7 @@ fn serde_json_derive_multi_query(json: &str) {
     #[derive(Deserialize)]
     struct Widget {
         image: Image,
-        text: Text,
+        text:  Text,
     }
     #[derive(Deserialize)]
     struct Image {
@@ -297,30 +341,51 @@ fn serde_json_derive_multi_query(json: &str) {
 
 fn criterion_benchmark(c: &mut Criterion) {
     // c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
+
+    // c.bench_function("ajson path benchmark", |b| b.iter(ajson_path_bench));
+
     c.bench_function("ajson benchmark", |b| {
         b.iter(|| ajson_bench(black_box(BENCH_DATA)))
     });
-    //c.bench_function("serde_json benchmark", |b| {
-    //    b.iter(|| serde_json_bench(black_box(BENCH_DATA)))
-    //});
-    //c.bench_function("json-rust benchmark", |b| {
-    //    b.iter(|| json_rust_bench(black_box(BENCH_DATA)))
-    //});
-    c.bench_function("ajson selector", |b| {
-        b.iter(|| ajson_selector(black_box(BENCH_DATA)))
+
+    c.bench_function("gjson benchmark", |b| {
+        b.iter(|| gjson_bench(black_box(BENCH_DATA)))
     });
-    c.bench_function("ajson multi query", |b| {
-        b.iter(|| ajson_multi_query(black_box(BENCH_DATA)))
-    });
-    //c.bench_function("serde derive", |b| {
-    //    b.iter(|| serde_json_derive_bench(black_box(BENCH_DATA)))
-    //});
-    //c.bench_function("serde derive multi query", |b| {
-    //    b.iter(|| serde_json_derive_multi_query(black_box(BENCH_DATA)))
-    //});
-    //c.bench_function("nom json bench", |b| {
-    //    b.iter(|| nom_json_bench(black_box(BENCH_DATA)))
-    //});
+
+    // c.bench_function("serde_json benchmark", |b| {
+    //     b.iter(|| serde_json_bench(black_box(BENCH_DATA)))
+    // });
+
+    // c.bench_function("json-rust benchmark", |b| {
+    //     b.iter(|| json_rust_bench(black_box(BENCH_DATA)))
+    // });
+
+    // c.bench_function("ajson selector", |b| {
+    //     b.iter(|| ajson_selector(black_box(BENCH_DATA)))
+    // });
+
+    // c.bench_function("gjson selector", |b| {
+    //     b.iter(|| gjson_selector(black_box(BENCH_DATA)))
+    // });
+
+    // c.bench_function("ajson multi query", |b| {
+    //     b.iter(|| ajson_multi_query(black_box(BENCH_DATA)))
+    // });
+
+    // c.bench_function("gjson multi query", |b| {
+    //     b.iter(|| gjson_multi_query(black_box(BENCH_DATA)))
+    // });
+
+    // c.bench_function("serde derive", |b| {
+    //     b.iter(|| serde_json_derive_bench(black_box(BENCH_DATA)))
+    // });
+    // c.bench_function("serde derive multi query", |b| {
+    //     b.iter(|| serde_json_derive_multi_query(black_box(BENCH_DATA)))
+    // });
+
+    // c.bench_function("nom json bench", |b| {
+    //     b.iter(|| nom_json_bench(black_box(BENCH_DATA)))
+    // });
 }
 
 criterion_group!(benches, criterion_benchmark);

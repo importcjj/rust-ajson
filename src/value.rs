@@ -1,13 +1,6 @@
-use crate::parser;
-use crate::path::Path;
-use crate::reader::Bytes;
-use crate::Result;
-use number::Number;
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::fmt;
-use std::fmt::Formatter;
-use std::str;
+use std::{borrow::Cow, collections::HashMap, fmt, fmt::Formatter, str};
+
+use crate::{number::Number, parser, path::Path, Result};
 
 /// Represents JSON valuue.
 #[derive(PartialEq, Eq, Clone)]
@@ -46,7 +39,7 @@ impl<'a> Value<'a> {
     /// About path syntax, see [here](index.html#syntax).
     /// For more detail, see [`get`](fn.get.html).
     /// ```
-    /// use ajson::{Value, Result};
+    /// use ajson::{Result, Value};
     /// fn main() -> Result<()> {
     ///     let v = Value::Array("[1,2,3]".into());
     ///     let first_num = v.get("0")?.unwrap();
@@ -57,9 +50,9 @@ impl<'a> Value<'a> {
     pub fn get(&self, path: &'a str) -> Result<Option<Value>> {
         match self {
             Value::Array(s) | Value::Object(s) => {
-                let mut bytes = Bytes::new(s.as_bytes());
-                let p = Path::parse(path.as_ref())?;
-                Ok(parser::bytes_get(&mut bytes, &p)?.map(|el| el.to_value()))
+                let p = Path::from_slice(path.as_ref())?;
+                let (a, _left) = parser::bytes_get(s.as_bytes(), &p)?;
+                Ok(a.map(|el| el.to_value()))
             }
             _ => Ok(None),
         }
@@ -153,20 +146,14 @@ impl<'a> Value<'a> {
 
     pub fn as_vec(&self) -> Option<Vec<Value>> {
         match self {
-            Value::Array(s) => {
-                let mut bytes = Bytes::new(s.as_bytes());
-                parser::bytes_to_vec(&mut bytes).ok()
-            }
+            Value::Array(s) => parser::bytes_to_vec(s.as_bytes()).ok(),
             _ => None,
         }
     }
 
     pub fn as_object(&self) -> Option<HashMap<&str, Value>> {
         match self {
-            Value::Object(s) => {
-                let mut bytes = Bytes::new(s.as_bytes());
-                parser::bytes_to_map(&mut bytes).ok()
-            }
+            Value::Object(s) => parser::bytes_to_map(s.as_bytes()).ok(),
             _ => None,
         }
     }
