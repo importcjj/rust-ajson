@@ -90,7 +90,6 @@ pub fn bytes_to_map(mut bytes: &[u8]) -> Result<HashMap<&str, Value>> {
         }
     }
 
-
     Ok(m)
 }
 
