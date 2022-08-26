@@ -22,7 +22,7 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-    - run: cargo check --verbose
+    - run: cargo test --verbose
       
   test-in-nightly:
     
@@ -36,4 +36,4 @@ jobs:
           toolchain: nightly
           override: true
           components: rustfmt, clippy
-    - run: cargo check --verbose
+    - run: cargo test --verbose
