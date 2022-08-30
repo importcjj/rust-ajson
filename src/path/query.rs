@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{parser, path::DEFAULT_NONE_PATH, Path};
+use super::{parser, Path, DEFAULT_NONE_PATH};
 #[cfg(feature = "wild")]
 use crate::wild;
 use crate::{element::Element, Result, Value};

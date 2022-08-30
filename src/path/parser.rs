@@ -1,7 +1,6 @@
 use super::{
-    path::Path,
     query::{Query, QueryValue},
-    sub_selector,
+    sub_selector, Path,
 };
 use crate::{element, number::Number, util, Result};
 
@@ -11,9 +10,10 @@ pub(super) fn parse(v: &[u8]) -> Result<Path> {
     }
 
     let bytes = v;
-    let mut current_path = Path::default();
+    let mut current_path = Path::builder();
     let mut depth = 0;
     let mut i = 0;
+    let mut arrch = false;
 
     while i < bytes.len() {
         let &b = unsafe { bytes.get_unchecked(i) };
@@ -21,7 +21,7 @@ pub(super) fn parse(v: &[u8]) -> Result<Path> {
         match b {
             b'\\' => {
                 i += 2;
-                current_path.set_esc(true);
+                current_path = current_path.esc(true);
                 continue;
             }
             b']' | b')' | b'}' => {
@@ -31,33 +31,34 @@ pub(super) fn parse(v: &[u8]) -> Result<Path> {
             }
             b'.' => {
                 if depth == 0 && i > 0 {
-                    current_path.set_part(&v[..i]);
-                    current_path.set_ok(true);
-                    current_path.set_more(true);
+                    current_path = current_path.ident(&v[..i]);
+                    current_path = current_path.ok(true);
+                    current_path = current_path.more(true);
                     i += 1;
 
-                    current_path.set_next(&v[i..]);
+                    current_path = current_path.next(&v[i..]);
 
-                    return Ok(current_path);
+                    return current_path.build();
                 }
             }
             #[cfg(feature = "wild")]
-            b'*' | b'?' => current_path.set_wild(true),
+            b'*' | b'?' => current_path = current_path.wild(true),
             b'#' => {
                 if depth == 0 {
-                    current_path.set_arrch(true)
+                    current_path = current_path.arrch(true);
+                    arrch = true;
                 }
             }
             b @ b'[' | b @ b'(' | b @ b'{' => {
                 depth += 1;
                 if depth == 1 {
-                    if current_path.arrch {
+                    if arrch {
                         i += 1;
                         let (query, offset) = parse_query(&v[i..])?;
                         if query.on {
                             i += offset - 1;
                         }
-                        current_path.set_q(query);
+                        current_path = current_path.query(query);
 
                         depth = 0;
                         continue;
@@ -65,9 +66,9 @@ pub(super) fn parse(v: &[u8]) -> Result<Path> {
                         let (selectors, offset, ok) = sub_selector::parse_selectors(&v[i..]);
                         if ok {
                             if b != b'{' {
-                                current_path.set_arrsel(true);
+                                current_path = current_path.arrsel(true);
                             }
-                            current_path.set_selectors(selectors);
+                            current_path = current_path.selector(selectors);
                             i += offset - 1;
                             depth = 0;
                         }
@@ -79,10 +80,7 @@ pub(super) fn parse(v: &[u8]) -> Result<Path> {
         i += 1;
     }
 
-    current_path.set_part(v);
-    current_path.set_more(false);
-    current_path.set_ok(true);
-    Ok(current_path)
+    current_path.ident(v).more(false).ok(true).build()
 }
 
 fn parse_query(v: &[u8]) -> Result<(Query, usize)> {
@@ -181,7 +179,7 @@ fn parser_query_value(bytes: &[u8]) -> Result<(QueryValue, usize)> {
                 (QueryValue::Null, 4)
             }
             b'"' => {
-                let (s, _, esc) = element::string_u8(bytes)?;
+                let (s, _, _esc) = element::string_u8(bytes)?;
                 if s.len() < 2 {
                     (QueryValue::NotExist, s.len())
                 } else {

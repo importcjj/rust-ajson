@@ -74,7 +74,7 @@ pub fn bytes_to_map(mut bytes: &[u8]) -> Result<HashMap<&str, Value>> {
         }
 
         let input = unsafe { bytes.get_unchecked(i..) };
-        let (key, b, esc) = element::string_u8(input)?;
+        let (key, b, _esc) = element::string_u8(input)?;
         bytes = b;
 
         let (val_element, b) = element::read_one(bytes)?;
