@@ -151,12 +151,12 @@ Value has a number of methods that meet your different needs.
 ```rust
 value.get(&str) -> Option<Value>
 value.as_str() -> &str
-value.to_u64() -> u64
-value.to_i64() -> i64
-value.to_f64() -> f64
-value.to_bool() -> bool
-value.to_vec() -> Vec<Value>
-value.to_object() -> HashMap<String, Value>
+value.as_u64() -> u64
+value.as_i64() -> i64
+value.as_f64() -> f64
+value.as_bool() -> bool
+value.as_vec() -> Vec<Value>
+value.as_object() -> HashMap<String, Value>
 ```
 
 
@@ -231,13 +231,9 @@ Found 5 outliers among 100 measurements (5.00%)
   1 (1.00%) high severe
 ```
 
-* MacBook Pro (13-inch, 2018, Four Thunderbolt 3 Ports)
-* 2.7 GHz Intel Core i7
-* 16 GB 2133 MHz LPDDR3
-
-## problems
-
-AJSON has just been finished, there may be some bugs and shortcomings, please feel free to issue. Also, Rust is a new language for me, and maybe ajson isn't rust enough, so I hope you have some suggestions.
+* MacBook Pro (14-inch, 2021)
+* Apple M1 Pro
+* 16 GB
 
 ## License
  MIT License.

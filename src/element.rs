@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap, str};
+use std::{borrow::Cow, collections::HashMap};
 
 use crate::{unescape, value::Value, Number, Result};
 
@@ -153,11 +153,6 @@ pub fn null_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
 }
 
 #[inline(always)]
-pub fn split_at(s: &str, mid: usize) -> (&str, &str) {
-    unsafe { (s.get_unchecked(..mid), s.get_unchecked(mid..s.len())) }
-}
-
-#[inline(always)]
 pub fn split_at_u8(s: &[u8], mid: usize) -> (&[u8], &[u8]) {
     unsafe { (s.get_unchecked(..mid), s.get_unchecked(mid..s.len())) }
 }
@@ -201,60 +196,21 @@ pub fn string_u8(bytes: &[u8]) -> Result<(&[u8], &[u8], bool)> {
     Ok((a, b, esc))
 }
 
-pub fn string(input: &str) -> Result<(&str, &str)> {
-    let mut i = 1;
-    let bytes = input.as_bytes();
-    const CHUNK: usize = 4;
-
-    'outer: while i + CHUNK < bytes.len() {
-        for _ in 0..CHUNK {
-            let &b = unsafe { bytes.get_unchecked(i) };
-            i += 1;
-            match b {
-                b'"' => {
-                    return Ok(split_at(input, i));
-                }
-                b'\\' => {
-                    i += 1;
-                    continue 'outer;
-                }
-                _ => {}
-            }
-        }
-    }
-
-    while i < bytes.len() {
-        let b = unsafe { *bytes.get_unchecked(i) };
-
-        match b {
-            b'"' => {
-                i += 1;
-                break;
-            }
-            b'\\' => {
-                i += 1;
-            }
-            _ => {}
-        }
-
-        i += 1;
-    }
-
-    return Ok(split_at(input, i));
-}
-
 #[cfg(test)]
-mod test_string {
-    use super::string;
+mod test_strin_u8 {
+    use super::string_u8;
 
     #[test]
     fn test_string() {
         assert_eq!(
-            string(r#""hello": "tom""#),
-            Ok((r#""hello""#, r#": "tom""#))
+            string_u8(r#""hello": "tom""#.as_bytes()),
+            Ok((r#""hello""#.as_bytes(), r#": "tom""#.as_bytes(), false))
         );
 
-        assert_eq!(string(r#""hello"#), Ok((r#""hello"#, r#""#)));
+        assert_eq!(
+            string_u8(r#""hello"#.as_bytes()),
+            Ok((r#""hello"#.as_bytes(), r#""#.as_bytes(), false))
+        );
     }
 }
 
@@ -322,83 +278,17 @@ pub fn compound_u8(bytes: &[u8]) -> Result<(&[u8], &[u8])> {
     return Ok(split_at_u8(bytes, i));
 }
 
-// object or array
-pub fn compound(input: &str) -> Result<(&str, &str)> {
-    let bytes = input.as_bytes();
-    let mut i = 1;
-    let mut depth = 1;
-
-    const CHUNK_SIZE: usize = 32;
-
-    'outer: while i + CHUNK_SIZE < bytes.len() {
-        for _ in 0..CHUNK_SIZE {
-            let &b = unsafe { bytes.get_unchecked(i) };
-
-            match b {
-                b'\\' => {
-                    i += 2;
-                    continue 'outer;
-                }
-                b'"' => {
-                    let input = unsafe { input.get_unchecked(i..) };
-                    let (s, _) = string(input).unwrap();
-
-                    i += s.len();
-                    continue 'outer;
-                }
-                b'[' | b'{' => depth += 1,
-                b']' | b'}' => {
-                    depth -= 1;
-                    if depth == 0 {
-                        i += 1;
-                        return Ok(split_at(input, i));
-                    }
-                }
-                _ => (),
-            }
-            i += 1;
-        }
-    }
-
-    while i < bytes.len() {
-        let &b = unsafe { bytes.get_unchecked(i) };
-        match b {
-            b'\\' => {
-                i += 1;
-            }
-            b'"' => {
-                let input = unsafe { input.get_unchecked(i..) };
-                let (s, _) = string(input).unwrap();
-                i += s.len();
-                continue;
-            }
-            b'[' | b'{' => depth += 1,
-            b']' | b'}' => {
-                depth -= 1;
-                if depth == 0 {
-                    i += 1;
-                    break;
-                }
-            }
-            _ => (),
-        }
-        i += 1;
-    }
-
-    return Ok(split_at(input, i));
-}
-
 #[cfg(test)]
-mod test_compound {
-    use super::{compound, Result};
+mod test_compound_u8 {
+    use super::{compound_u8, Result};
 
     #[test]
     fn test_compound() -> Result<()> {
         const JSON: &str = r#"{"1":"2", "name": "jack"}xxxx"#;
-        let r = compound(JSON)?;
+        let r = compound_u8(JSON.as_bytes())?;
 
-        assert_eq!(r.0, r#"{"1":"2", "name": "jack"}"#);
-        assert_eq!(r.1, "xxxx");
+        assert_eq!(r.0, r#"{"1":"2", "name": "jack"}"#.as_bytes());
+        assert_eq!(r.1, "xxxx".as_bytes());
 
         Ok(())
     }

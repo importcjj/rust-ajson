@@ -105,8 +105,6 @@ mod value;
 use std::result;
 
 #[doc(hidden)]
-pub use element::compound;
-#[doc(hidden)]
 pub use element::compound_u8;
 pub use number::Number;
 pub use path::Path;

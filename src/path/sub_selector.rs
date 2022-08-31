@@ -81,8 +81,8 @@ pub fn parse_selectors(v: &[u8]) -> (Vec<SubSelector>, usize, bool) {
                 i += 1;
             }
             b'"' => {
-                let input = unsafe { std::str::from_utf8_unchecked(v.get_unchecked(i..)) };
-                let (a, _) = element::string(input).unwrap();
+                let input = unsafe { v.get_unchecked(i..) };
+                let (a, _, _) = element::string_u8(input).unwrap();
                 i += a.len();
 
                 continue;
